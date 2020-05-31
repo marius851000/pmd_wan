@@ -160,9 +160,9 @@ pub struct Resolution<T> {
     pub y: T,
 }
 
-impl Resolution<u8> {
-    pub fn get_indice(self) -> (u16, u16) {
-        match (self.y, self.x) {
+/*impl Resolution<u8> {
+    pub fn get_indice(self) -> Option<(u16, u16)> {
+        Some(match (self.y, self.x) {
             (8, 8) => (0, 0),
             (16, 16) => (0, 1),
             (32, 32) => (0, 2),
@@ -175,10 +175,10 @@ impl Resolution<u8> {
             (16, 32) => (2, 2),
             (64, 32) => (1, 3),
             (32, 64) => (2, 3),
-            _ => panic!(),
-        }
+            _ => return None,
+        })
     }
-}
+}*/
 
 impl MetaFrame {
     fn new_from_bytes<F: Read>(
@@ -207,13 +207,13 @@ impl MetaFrame {
         // bit in ppmdu tool are right to left !!!
         let offset_y_data = wan_read_u16(file)?;
         let size_indice_y = ((0xC000 & offset_y_data) >> (8 + 6)) as u8;
-        let is_mosaic = get_bit_u16(offset_y_data, 3).unwrap();
+        let is_mosaic = get_bit_u16(offset_y_data, 3).unwrap(); //safe: always return if indice less than 16
         let unk3 = get_bit_u16(offset_y_data, 7).unwrap();
         let offset_y = i16::from_le_bytes((offset_y_data & 0x00FF).to_le_bytes()) as i32; //range: 0-255
 
         let offset_x_data = wan_read_u16(file)?;
         let size_indice_x = ((0xC000 & offset_x_data) >> (8 + 6)) as u8;
-        let v_flip = get_bit_u16(offset_x_data, 2).unwrap();
+        let v_flip = get_bit_u16(offset_x_data, 2).unwrap(); //as safe as before
         let h_flip = get_bit_u16(offset_x_data, 3).unwrap();
         let is_last = get_bit_u16(offset_x_data, 4).unwrap();
         let offset_x = (i16::from_le_bytes((offset_x_data & 0x01FF).to_le_bytes()) as i32) - 256; //range: 0-511
@@ -236,7 +236,7 @@ impl MetaFrame {
             v_flip,
             h_flip,
             is_mosaic,
-            pal_idx: pal_idx,
+            pal_idx,
             resolution: match (size_indice_y << 4) + size_indice_x {
                 0x00 => Some(Resolution { x: 8, y: 8 }),
                 0x01 => Some(Resolution { x: 16, y: 16 }),
@@ -259,7 +259,7 @@ impl MetaFrame {
         self.is_last
     }
 
-    fn write<F: Write>(
+    /*fn write<F: Write>(
         file: &mut F,
         meta_frame: &MetaFrame,
         previous_image: Option<usize>,
@@ -280,7 +280,10 @@ impl MetaFrame {
         wan_write_u16(file, meta_frame.unk1)?; //unk
 
         let (size_indice_y, size_indice_x) = match meta_frame.resolution {
-            Some(value) => value.get_indice(),
+            Some(value) => match value.get_indice() {
+                Some(value) => value,
+                None => panic!(),
+            },
             None => panic!(),
         };
 
@@ -301,7 +304,7 @@ impl MetaFrame {
         wan_write_u16(file, meta_frame.unk2)?;
 
         Ok(())
-    }
+    }*/
 }
 
 #[derive(Debug)]
@@ -331,7 +334,7 @@ impl MetaFrameGroup {
         })
     }
 
-    fn write<F: Write>(
+    /*fn write<F: Write>(
         file: &mut F,
         meta_frame_group: &MetaFrameGroup,
         meta_frames: &[MetaFrame],
@@ -344,7 +347,7 @@ impl MetaFrameGroup {
             previous_image = Some(l);
         }
         Ok(())
-    }
+    }*/
 }
 pub struct MetaFrameStore {
     pub meta_frames: Vec<MetaFrame>,
@@ -402,7 +405,7 @@ impl MetaFrameStore {
         Err(WanError::InvalidResolution)
     }
 
-    fn write<F: Write + Seek>(
+    /*fn write<F: Write + Seek>(
         file: &mut F,
         meta_frame_store: &MetaFrameStore,
     ) -> Result<Vec<u32>, WanError> {
@@ -419,7 +422,7 @@ impl MetaFrameStore {
         }
 
         Ok(meta_frame_references)
-    }
+    }*/
 }
 
 #[derive(Debug)]
@@ -449,13 +452,13 @@ impl ImageAssemblyEntry {
         self.pixel_amount == 0 && self.pixel_src == 0
     }
 
-    fn write<F: Write>(&self, file: &mut F) -> Result<(), WanError> {
+    /*fn write<F: Write>(&self, file: &mut F) -> Result<(), WanError> {
         wan_write_u32(file, self.pixel_src as u32)?;
         wan_write_u16(file, self.byte_amount as u16)?;
         wan_write_u16(file, 0)?;
         wan_write_u32(file, self._z_index)?;
         Ok(())
-    }
+    }*/
 }
 
 /// an helper struct, that permit to know where to place the next pixel
@@ -611,7 +614,7 @@ impl Image {
         Ok(Image { img, z_index })
     }
 
-    fn write<F: Write + Seek>(
+    /*fn write<F: Write + Seek>(
         &self,
         file: &mut F,
         palette: &Palette,
@@ -849,7 +852,7 @@ impl Image {
         }
 
         Ok((assembly_table_offset, pointer))
-    }
+    }*/
 }
 
 pub struct ImageStore {
@@ -879,11 +882,12 @@ impl ImageStore {
         for (image_id, image) in image_pointers.iter().enumerate() {
             trace!("reading image n°{}", image_id);
             let (resolution, pal_idx) = meta_frame_store.find_resolution_and_pal_idx_image(image_id as u32)?;
-            if resolution.is_none() {
-                return Err(WanError::ImageWithoutResolution)
-            }
+            let resolution = match resolution {
+                None => return Err(WanError::ImageWithoutResolution),
+                Some(value) => value,
+            };
             file.seek(SeekFrom::Start(*image))?;
-            let img = Image::new_from_bytes(file, resolution.unwrap(), pal_idx, &palette)?;
+            let img = Image::new_from_bytes(file, resolution, pal_idx, &palette)?;
             images.push(img);
         }
 
@@ -894,7 +898,7 @@ impl ImageStore {
         self.images.len()
     }
 
-    fn write<F: Write + Seek>(
+    /*fn write<F: Write + Seek>(
         file: &mut F,
         wanimage: &WanImage,
     ) -> Result<(Vec<u64>, Vec<u64>), WanError> {
@@ -909,7 +913,7 @@ impl ImageStore {
             image_offset.push(assembly_table_offset);
         }
         Ok((image_offset, sir0_pointer_images))
-    }
+    }*/
 }
 
 pub struct Palette {
@@ -963,7 +967,7 @@ impl Palette {
         Err(WanError::CantFindColorInPalette)
     }
 
-    fn write<F: Write + Seek>(&self, file: &mut F) -> Result<u64, WanError> {
+    /*fn write<F: Write + Seek>(&self, file: &mut F) -> Result<u64, WanError> {
         let palette_start_offset = file.seek(SeekFrom::Current(0))?;
         for color in &self.palette {
             wan_write_u8(file, color.0)?;
@@ -980,7 +984,7 @@ impl Palette {
         wan_write_u32(file, 0)?; //magic
 
         Ok(palette_header_offset)
-    }
+    }*/
 }
 
 #[derive(Debug)]
@@ -1026,7 +1030,7 @@ impl AnimationFrame {
         self.duration == 0 && self.frame_id == 0
     }
 
-    pub fn write<F: Write>(file: &mut F, frame: &AnimationFrame) -> Result<(), WanError> {
+    /*pub fn write<F: Write>(file: &mut F, frame: &AnimationFrame) -> Result<(), WanError> {
         wan_write_u8(file, frame.duration)?;
         wan_write_u8(file, frame.flag)?;
         wan_write_u16(file, frame.frame_id)?;
@@ -1050,7 +1054,7 @@ impl AnimationFrame {
                 shadow_offset_y: 0,
             },
         )
-    }
+    }*/
 }
 
 #[derive(Debug, PartialEq)]
@@ -1075,13 +1079,13 @@ impl Animation {
         self.frames.len()
     }
 
-    pub fn write<F: Write>(file: &mut F, animation: &Animation) -> Result<(), WanError> {
+    /*pub fn write<F: Write>(file: &mut F, animation: &Animation) -> Result<(), WanError> {
         for frame in &animation.frames {
             AnimationFrame::write(file, frame)?;
         }
         AnimationFrame::write_null(file)?;
         Ok(())
-    }
+    }*/
 }
 
 pub struct AnimStore {
@@ -1147,8 +1151,10 @@ impl AnimStore {
                 }
             };
         }
-        if particule_table_end.is_none() {
-            particule_table_end = Some(file.seek(SeekFrom::Current(0))?);
+
+        let particule_table_end = match particule_table_end {
+            None => file.seek(SeekFrom::Current(0))?,
+            Some(value) => value,
         };
 
         let mut animations: Vec<Animation> = Vec::new();
@@ -1181,7 +1187,7 @@ impl AnimStore {
                 copied_on_previous: Some(copied_on_previous),
                 anim_groups: anim_groups_result,
             },
-            particule_table_end.unwrap(),
+            particule_table_end,
         ))
     }
 
@@ -1189,7 +1195,7 @@ impl AnimStore {
         self.animations.len()
     }
 
-    fn write<F: Write + Seek>(file: &mut F, anim_store: &AnimStore) -> Result<Vec<u64>, WanError> {
+    /*fn write<F: Write + Seek>(file: &mut F, anim_store: &AnimStore) -> Result<Vec<u64>, WanError> {
         let mut animations_pointer = vec![];
         let mut previous_animation: Option<&Animation> = None;
         let mut previous_pointer = None;
@@ -1217,9 +1223,9 @@ impl AnimStore {
             previous_pointer = Some(actual_pointer);
         }
         Ok(animations_pointer)
-    }
+    }*/
 
-    fn write_animation_group<F: Write + Seek>(
+    /*fn write_animation_group<F: Write + Seek>(
         &self,
         file: &mut F,
         animations_pointer: &[u64],
@@ -1268,7 +1274,7 @@ impl AnimStore {
         }
 
         Ok((animation_group_reference_offset, sir0_animation))
-    }
+    }*/
 }
 
 pub struct WanImage {
@@ -1422,16 +1428,9 @@ impl WanImage {
         pointer_animation_groups_table: u64
     ) -> Option<u64> {
         file.seek(SeekFrom::Start(pointer_animation_groups_table)).ok()?;
-        loop {
-            match wan_read_u32(file) {
-                Ok(pntr) => {
-                    if pntr != 0 {
-                        return Some(pntr as u64);
-                    }
-                }
-                Err(_) => {
-                    break;
-                }
+        while let Ok(pntr) = wan_read_u32(file) {
+            if pntr != 0 {
+                return Some(pntr as u64);
             }
         }
         None
@@ -1572,4 +1571,3 @@ impl WanImage {
         Ok(file)
     }*/
 }
-
