@@ -67,7 +67,7 @@ impl fmt::Display for WanError {
     }
 }
 
-fn get_bit_u16(byte: u16, id: usize) -> Option<bool> {
+fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
     if id < 8 {
         Some((byte >> (15 - id) << 15) >= 1)
     } else {
@@ -121,7 +121,7 @@ fn wan_write_u8<F: Write>(file: &mut F, value: u8) -> Result<(), WanError> {
     Ok(file.write_all(&value.to_le_bytes())?)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SpriteType {
     PropsUI,
     Chara,
@@ -150,6 +150,7 @@ pub struct MetaFrame {
     pub v_flip: bool,
     pub h_flip: bool,
     pub is_mosaic: bool,
+    pub pal_idx: u16,
     pub resolution: Option<Resolution<u8>>,
 }
 
@@ -218,6 +219,7 @@ impl MetaFrame {
         let offset_x = (i16::from_le_bytes((offset_x_data & 0x01FF).to_le_bytes()) as i32) - 256; //range: 0-511
 
         let unk2 = wan_read_u16(file)?;
+        let pal_idx = ((0xF000 & unk2) >> 12) as u16;
 
         Ok(MetaFrame {
             unk1,
@@ -234,6 +236,7 @@ impl MetaFrame {
             v_flip,
             h_flip,
             is_mosaic,
+            pal_idx: pal_idx,
             resolution: match (size_indice_y << 4) + size_indice_x {
                 0x00 => Some(Resolution { x: 8, y: 8 }),
                 0x01 => Some(Resolution { x: 16, y: 16 }),
@@ -390,10 +393,10 @@ impl MetaFrameStore {
         })
     }
 
-    fn find_resolution_image(&self, image_id: u32) -> Result<Option<Resolution<u8>>, WanError> {
+    fn find_resolution_and_pal_idx_image(&self, image_id: u32) -> Result<(Option<Resolution<u8>>, u16), WanError> {
         for actual_image in &self.meta_frames {
             if actual_image.image_index == image_id as usize {
-                return Ok(actual_image.resolution);
+                return Ok((actual_image.resolution, actual_image.pal_idx));
             };
         }
         Err(WanError::InvalidResolution)
@@ -514,6 +517,7 @@ impl Image {
     fn new_from_bytes<F: Read + Seek>(
         file: &mut F,
         resolution: Resolution<u8>,
+        pal_idx: u16,
         palette: &Palette,
     ) -> Result<Image, WanError> {
         let mut img_asm_table = Vec::new();
@@ -584,7 +588,7 @@ impl Image {
                     if color_id == 0 {
                         *pixel = image::Rgba([0, 0, 0, 0]);
                     } else {
-                        let color = palette.get(color_id as usize)?;
+                        let color = palette.get((pal_idx * 16 + color_id as u16) as usize)?;
                         let color = [color.0, color.1, color.2, 255];
                         *pixel = image::Rgba(color);
                     };
@@ -874,12 +878,12 @@ impl ImageStore {
 
         for (image_id, image) in image_pointers.iter().enumerate() {
             trace!("reading image n°{}", image_id);
-            let resolution = match meta_frame_store.find_resolution_image(image_id as u32)? {
-                Some(value) => value,
-                None => return Err(WanError::ImageWithoutResolution),
-            };
+            let (resolution, pal_idx) = meta_frame_store.find_resolution_and_pal_idx_image(image_id as u32)?;
+            if resolution.is_none() {
+                return Err(WanError::ImageWithoutResolution)
+            }
             file.seek(SeekFrom::Start(*image))?;
-            let img = Image::new_from_bytes(file, resolution, &palette)?;
+            let img = Image::new_from_bytes(file, resolution.unwrap(), pal_idx, &palette)?;
             images.push(img);
         }
 
@@ -1091,11 +1095,13 @@ impl AnimStore {
         file: &mut F,
         pointer_animation_groups_table: u64,
         amount_animation_group: u16,
+        is_for_chara: bool
     ) -> Result<(AnimStore, u64), WanError> {
         //TODO: rewrite this function, it seem to be too complicated to understand
         file.seek(SeekFrom::Start(pointer_animation_groups_table))?;
         let mut anim_group_entry: Vec<Option<AnimGroupEntry>> = Vec::new();
-        for animation_group_id in 0..amount_animation_group + 7 {
+        let add_for_chara = if is_for_chara { 7 } else { 0 };
+        for animation_group_id in 0..amount_animation_group + add_for_chara {
             //HACK: CRITICAL:
             let pointer = wan_read_u32(file)?;
             if pointer == 0 {
@@ -1341,7 +1347,7 @@ impl WanImage {
         wan_read_u16(&mut file)?; //unk
         let is_256_color = match wan_read_u16(&mut file)? {
             0 => false,
-            1 => unimplemented!(),
+            1 => true,
             color_id => return Err(WanError::InvalidColorNumber(color_id)),
         };
         wan_read_u16(&mut file)?; //unk
@@ -1358,7 +1364,11 @@ impl WanImage {
         // decode meta-frame
         trace!("decoding meta-frame");
         let meta_frame_reference_end_pointer: u64 = match pointer_particule_offset_table {
-            0 => unimplemented!(),
+            0 => match WanImage::find_first_non_null_animation_seq_entry(&mut file, pointer_animation_groups_table) {
+                Some(v) => v,
+                // Fall back to animation group offset
+                None => pointer_animation_groups_table
+            },
             value => value,
         };
         let amount_meta_frame =
@@ -1381,12 +1391,17 @@ impl WanImage {
             &mut file,
             pointer_animation_groups_table,
             amount_animation_group,
+            sprite_type == SpriteType::Chara
         )?;
 
-        file.seek(SeekFrom::Start(pointer_particule_offset_table))?;
-        let mut raw_particule_table =
-            vec![0; (particule_table_end - pointer_particule_offset_table) as usize];
-        file.read_exact(&mut raw_particule_table)?;
+        let mut raw_particule_table: Vec<u8>;
+        if pointer_particule_offset_table > 0 {
+            file.seek(SeekFrom::Start(pointer_particule_offset_table))?;
+            raw_particule_table = vec![0; (particule_table_end - pointer_particule_offset_table) as usize];
+            file.read_exact(&mut raw_particule_table)?;
+        } else {
+            raw_particule_table = Vec::new();
+        }
 
         Ok(WanImage {
             image_store,
@@ -1398,6 +1413,28 @@ impl WanImage {
             sprite_type,
             unk_1,
         })
+    }
+
+    /// If the file doesn't have an entity effect particle list, we ned to instead search
+    /// for the pointer to the first animation sequence, to get the end of the meta frame table.
+    fn find_first_non_null_animation_seq_entry<F: Read + Seek>(
+        file: &mut F,
+        pointer_animation_groups_table: u64
+    ) -> Option<u64> {
+        file.seek(SeekFrom::Start(pointer_animation_groups_table)).ok()?;
+        loop {
+            match wan_read_u32(file) {
+                Ok(pntr) => {
+                    if pntr != 0 {
+                        return Some(pntr as u64);
+                    }
+                }
+                Err(_) => {
+                    break;
+                }
+            }
+        }
+        None
     }
 
     //TODO:
@@ -1535,3 +1572,4 @@ impl WanImage {
         Ok(file)
     }*/
 }
+
