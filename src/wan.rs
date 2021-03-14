@@ -2,11 +2,10 @@
 #![allow(clippy::len_without_is_empty)]
 #![allow(clippy::cognitive_complexity)]
 
-//TODO: use byteorder
-
 extern crate image;
 use std::io;
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom};
+use byteorder::{LE, ReadBytesExt};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -63,51 +62,12 @@ fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
     }
 }
 
-fn wan_read_i16<F: Read>(file: &mut F) -> Result<i16, WanError> {
-    let mut buffer = [0; 2];
-    file.read_exact(&mut buffer)?;
-    Ok(i16::from_le_bytes(buffer))
-}
-
-fn wan_read_u8<F: Read>(file: &mut F) -> Result<u8, WanError> {
-    let mut buffer = [0];
-    file.read_exact(&mut buffer)?;
-    Ok(buffer[0])
-}
-
-fn wan_read_u16<F: Read>(file: &mut F) -> Result<u16, WanError> {
-    let mut buffer = [0; 2];
-    file.read_exact(&mut buffer)?;
-    Ok(u16::from_le_bytes(buffer))
-}
-
-fn wan_read_u32<F: Read>(file: &mut F) -> Result<u32, WanError> {
-    let mut buffer = [0; 4];
-    file.read_exact(&mut buffer)?;
-    Ok(u32::from_le_bytes(buffer))
-}
-
 fn wan_read_raw_4<F: Read>(file: &mut F) -> Result<[u8; 4], WanError> {
     let mut buffer = [0; 4];
     file.read_exact(&mut buffer)?;
     Ok(buffer)
 }
 
-fn wan_write_i16<F: Write>(file: &mut F, value: i16) -> Result<(), WanError> {
-    Ok(file.write_all(&value.to_le_bytes())?)
-}
-
-fn wan_write_u16<F: Write>(file: &mut F, value: u16) -> Result<(), WanError> {
-    Ok(file.write_all(&value.to_le_bytes())?)
-}
-
-fn wan_write_u32<F: Write>(file: &mut F, value: u32) -> Result<(), WanError> {
-    Ok(file.write_all(&value.to_le_bytes())?)
-}
-
-fn wan_write_u8<F: Write>(file: &mut F, value: u8) -> Result<(), WanError> {
-    Ok(file.write_all(&value.to_le_bytes())?)
-}
 
 #[derive(Debug, PartialEq)]
 pub enum SpriteType {
@@ -174,7 +134,7 @@ impl MetaFrame {
         previous_image: Option<usize>,
     ) -> Result<MetaFrame, WanError> {
         trace!("parsing a meta-frame");
-        let image_index = match wan_read_i16(file)? {
+        let image_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
                 None => return Err(WanError::ImageIDPointBackButFirstImage),
                 Some(value) => value,
@@ -188,25 +148,25 @@ impl MetaFrame {
             }
         };
 
-        let unk1 = wan_read_u16(file)?;
+        let unk1 = file.read_u16::<LE>()?;
 
         // they are quite strangely encoded (the fact I should read as little-endian the 2 byte correctly reading them)
 
         // bit in ppmdu tool are right to left !!!
-        let offset_y_data = wan_read_u16(file)?;
+        let offset_y_data = file.read_u16::<LE>()?;
         let size_indice_y = ((0xC000 & offset_y_data) >> (8 + 6)) as u8;
         let is_mosaic = get_bit_u16(offset_y_data, 3).unwrap(); //safe: always return if indice less than 16
         let unk3 = get_bit_u16(offset_y_data, 7).unwrap();
         let offset_y = i16::from_le_bytes((offset_y_data & 0x00FF).to_le_bytes()) as i32; //range: 0-255
 
-        let offset_x_data = wan_read_u16(file)?;
+        let offset_x_data = file.read_u16::<LE>()?;
         let size_indice_x = ((0xC000 & offset_x_data) >> (8 + 6)) as u8;
         let v_flip = get_bit_u16(offset_x_data, 2).unwrap(); //as safe as before
         let h_flip = get_bit_u16(offset_x_data, 3).unwrap();
         let is_last = get_bit_u16(offset_x_data, 4).unwrap();
         let offset_x = (i16::from_le_bytes((offset_x_data & 0x01FF).to_le_bytes()) as i32) - 256; //range: 0-511
 
-        let unk2 = wan_read_u16(file)?;
+        let unk2 = file.read_u16::<LE>()?;
         let pal_idx = ((0xF000 & unk2) >> 12) as u16;
 
         Ok(MetaFrame {
@@ -352,7 +312,7 @@ impl MetaFrameStore {
 
         let mut meta_frame_reference: Vec<u64> = Vec::new();
         for _ in 0..nb_meta_frame {
-            let actual_ptr = wan_read_u32(file)? as u64;
+            let actual_ptr = file.read_u32::<LE>()? as u64;
             //some check
             match last_pointer {
                 None => last_pointer = Some(actual_ptr),
@@ -429,11 +389,11 @@ pub struct ImageAssemblyEntry {
 
 impl ImageAssemblyEntry {
     fn new_from_bytes<F: Read>(file: &mut F) -> Result<ImageAssemblyEntry, WanError> {
-        let pixel_src = wan_read_u32(file)? as u64;
-        let byte_amount = wan_read_u16(file)? as u64;
+        let pixel_src = file.read_u32::<LE>()? as u64;
+        let byte_amount = file.read_u16::<LE>()? as u64;
         let pixel_amount = byte_amount * 2;
-        wan_read_u16(file)?;
-        let z_index = wan_read_u32(file)?;
+        file.read_u16::<LE>()?;
+        let z_index = file.read_u32::<LE>()?;
         Ok(ImageAssemblyEntry {
             pixel_src,
             pixel_amount,
@@ -587,7 +547,7 @@ impl Image {
                 let mut actual_byte = 0;
                 for loop_id in 0..entry.pixel_amount {
                     let color_id = if loop_id % 2 == 0 {
-                        actual_byte = wan_read_u8(file)?;
+                        actual_byte = file.read_u8()?;
                         actual_byte >> 4
                     } else {
                         (actual_byte << 4) >> 4
@@ -876,7 +836,7 @@ impl ImageStore {
         trace!("will read {} image", amount_images);
         let mut image_pointers: Vec<u64> = Vec::new(); //list of reference to image
         for _ in 0..amount_images {
-            let current_pointer = wan_read_u32(file)? as u64;
+            let current_pointer = file.read_u32::<LE>()? as u64;
             if current_pointer == 0 {
                 return Err(WanError::NullImagePointer);
             };
@@ -931,24 +891,24 @@ pub struct Palette {
 impl Palette {
     fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<Palette, WanError> {
         let mut palette = Vec::new();
-        let pointer_palette_start = wan_read_u32(file)? as u64;
-        wan_read_u16(file)?;
-        let nb_color = wan_read_u16(file)?;
+        let pointer_palette_start = file.read_u32::<LE>()? as u64;
+        file.read_u16::<LE>()?;
+        let nb_color = file.read_u16::<LE>()?;
         wan_read_raw_4(file)?;
         trace!(
             "palette_start: {}, nb_color: {}",
             pointer_palette_start,
             nb_color
         );
-        if wan_read_u32(file)? != 0 {
+        if file.read_u32::<LE>()? != 0 {
             return Err(WanError::PaletteDontEndWithZero);
         };
         file.seek(SeekFrom::Start(pointer_palette_start))?;
         for _ in 0..nb_color {
-            let red = wan_read_u8(file)?;
-            let green = wan_read_u8(file)?;
-            let blue = wan_read_u8(file)?;
-            let alpha = wan_read_u8(file)?;
+            let red = file.read_u8()?;
+            let green = file.read_u8()?;
+            let blue = file.read_u8()?;
+            let alpha = file.read_u8()?;
             palette.push((red, green, blue, alpha));
         }
         Ok(Palette { palette })
@@ -1016,13 +976,13 @@ pub struct AnimationFrame {
 
 impl AnimationFrame {
     fn new<F: Read>(file: &mut F) -> Result<AnimationFrame, WanError> {
-        let duration = wan_read_u8(file)?;
-        let flag = wan_read_u8(file)?;
-        let frame_id = wan_read_u16(file)?;
-        let offset_x = wan_read_i16(file)?;
-        let offset_y = wan_read_i16(file)?;
-        let shadow_offset_x = wan_read_i16(file)?;
-        let shadow_offset_y = wan_read_i16(file)?;
+        let duration = file.read_u8()?;
+        let flag = file.read_u8()?;
+        let frame_id = file.read_u16::<LE>()?;
+        let offset_x = file.read_i16::<LE>()?;
+        let offset_y = file.read_i16::<LE>()?;
+        let shadow_offset_x = file.read_i16::<LE>()?;
+        let shadow_offset_y = file.read_i16::<LE>()?;
         Ok(AnimationFrame {
             duration,
             flag,
@@ -1122,13 +1082,13 @@ impl AnimStore {
             ),
         )? {
             //HACK: CRITICAL: (why is it ?)
-            let pointer = wan_read_u32(file)?;
+            let pointer = file.read_u32::<LE>()?;
             if pointer == 0 {
                 anim_group_entry.push(None);
                 continue;
             };
-            let group_lenght = wan_read_u16(file)?;
-            let _unk16 = wan_read_u16(file)?;
+            let group_lenght = file.read_u16::<LE>()?;
+            let _unk16 = file.read_u16::<LE>()?;
             anim_group_entry.push(Some(AnimGroupEntry {
                 pointer,
                 group_lenght,
@@ -1155,7 +1115,7 @@ impl AnimStore {
 
                     let mut anim_ref = Vec::new();
                     for _ in 0..anim_group.group_lenght {
-                        anim_ref.push(wan_read_u32(file)? as u64);
+                        anim_ref.push(file.read_u32::<LE>()? as u64);
                     }
                     trace!(
                         "reading an animation group entry, id is {}, the pointer is {:?}",
@@ -1321,8 +1281,8 @@ impl WanImage {
         if sir0_header != [0x53, 0x49, 0x52, 0x30] {
             return Err(WanError::InvalidSir0(sir0_header));
         };
-        let sir0_pointer_header = wan_read_u32(&mut file)? as u64;
-        let _sir0_pointer_offset = wan_read_u32(&mut file)? as u64;
+        let sir0_pointer_header = file.read_u32::<LE>()? as u64;
+        let _sir0_pointer_offset = file.read_u32::<LE>()? as u64;
 
         let sir0_header_end = wan_read_raw_4(&mut file)?;
         if sir0_header_end != [0, 0, 0, 0] {
@@ -1332,9 +1292,9 @@ impl WanImage {
         // second step: decode the wan header
         trace!("reading the wan header");
         file.seek(SeekFrom::Start(sir0_pointer_header))?;
-        let pointer_to_anim_info = wan_read_u32(&mut file)? as u64;
-        let pointer_to_image_data_info = wan_read_u32(&mut file)? as u64;
-        let sprite_type = match wan_read_u16(&mut file)? {
+        let pointer_to_anim_info = file.read_u32::<LE>()? as u64;
+        let pointer_to_image_data_info = file.read_u32::<LE>()? as u64;
+        let sprite_type = match file.read_u16::<LE>()? {
             0 => SpriteType::PropsUI,
             1 => SpriteType::Chara,
             3 => SpriteType::Unknown,
@@ -1349,30 +1309,30 @@ impl WanImage {
         // third step: decode animation info block
         trace!("reading the animation info block");
         file.seek(SeekFrom::Start(pointer_to_anim_info))?;
-        let pointer_meta_frame_reference_table = wan_read_u32(&mut file)? as u64;
-        let pointer_particule_offset_table = wan_read_u32(&mut file)? as u64;
-        let pointer_animation_groups_table = wan_read_u32(&mut file)? as u64;
-        let amount_animation_group = wan_read_u16(&mut file)?;
+        let pointer_meta_frame_reference_table = file.read_u32::<LE>()? as u64;
+        let pointer_particule_offset_table = file.read_u32::<LE>()? as u64;
+        let pointer_animation_groups_table = file.read_u32::<LE>()? as u64;
+        let amount_animation_group = file.read_u16::<LE>()?;
 
         //TODO
         /*if file.seek(SeekFrom::Current(0))? != pointer_to_anim_info + 14 {
             bail!("we are not at the good position after the animation info block!!!");
         };*/
-        let unk_1 = wan_read_u32(&mut file)?;
+        let unk_1 = file.read_u32::<LE>()?;
 
         // fourth: decode image data info
         trace!("reading the image data info");
         file.seek(SeekFrom::Start(pointer_to_image_data_info))?;
-        let pointer_image_data_pointer_table = wan_read_u32(&mut file)? as u64;
-        let pointer_palette = wan_read_u32(&mut file)? as u64;
-        wan_read_u16(&mut file)?; //unk
-        let is_256_color = match wan_read_u16(&mut file)? {
+        let pointer_image_data_pointer_table = file.read_u32::<LE>()? as u64;
+        let pointer_palette = file.read_u32::<LE>()? as u64;
+        file.read_u16::<LE>()?; //unk
+        let is_256_color = match file.read_u16::<LE>()? {
             0 => false,
             1 => true,
             color_id => return Err(WanError::InvalidColorNumber(color_id)),
         };
-        wan_read_u16(&mut file)?; //unk
-        let amount_images = wan_read_u16(&mut file)?;
+        file.read_u16::<LE>()?; //unk
+        let amount_images = file.read_u16::<LE>()?;
 
         trace!("parsing the palette");
         //TODO
@@ -1467,7 +1427,7 @@ impl WanImage {
     ) -> Option<u64> {
         file.seek(SeekFrom::Start(pointer_animation_groups_table))
             .ok()?;
-        while let Ok(pntr) = wan_read_u32(file) {
+        while let Ok(pntr) = file.read_u32::<LE>() {
             if pntr != 0 {
                 return Some(pntr as u64);
             }
