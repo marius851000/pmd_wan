@@ -568,7 +568,7 @@ impl Image {
             let x_res = resolution.x as u32;
             let y_res = resolution.y as u32;
             if out_resolution.x >= x_res || out_resolution.y >= y_res {
-                return Err(WanError::InlineError("the resolution of a sprite is too small accept all it's pixel"))
+                Err(WanError::SpriteTooSmall)
             } else {
                 Ok(())
             }
