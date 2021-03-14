@@ -24,9 +24,3 @@ name = "wanfile"
 path = "fuzz_targets/wanfile.rs"
 test = false
 doc = false
-
-[[bin]]
-name = "wanfile_release"
-path = "fuzz_targets/wanfile.rs"
-test = false
-doc = false
