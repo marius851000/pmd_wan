@@ -603,16 +603,14 @@ impl Image {
                         *pixel = image::Rgba(color);
                     };
                 }
-            }
-            match z_index {
-                None => z_index = Some(entry._z_index),
-                Some(index) => {
-                    if index == entry._z_index {
-                        return Err(WanError::InlineError("index != entry._z_index"))
-                    };
-                    z_index = Some(entry._z_index);
-                }
-            }
+            };
+            // check that all part of the image have the same z index
+            if let Some(index) = z_index {
+                if index != entry._z_index {
+                    return Err(WanError::NonConstantIndexInImage);
+                };
+            };
+            z_index = Some(entry._z_index);
         }
 
         let z_index = match z_index {
