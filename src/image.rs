@@ -1,7 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom};
 
-use crate::{resolution::Resolution, Palette, WanError};
+use crate::{Palette, WanError, Resolution};
 
 #[derive(Debug)]
 pub struct ImageAssemblyEntry {
