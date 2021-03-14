@@ -45,4 +45,6 @@ pub enum WanError {
     SpriteTooSmall,
     #[error("an image doesn't have a constant depth index")]
     NonConstantIndexInImage,
+    #[error("The pointer to {0} is reference content after the end of the file")]
+    PostFilePointer(&'static str)
 }

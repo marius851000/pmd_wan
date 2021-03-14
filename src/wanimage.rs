@@ -24,6 +24,7 @@ impl WanImage {
     /// parse an image in the wan/wat format stored in the input file
     /// It assume that the file is decompressed
     pub fn decode_wan<F: Read + Seek>(mut file: F) -> Result<WanImage, WanError> {
+        let source_file_lenght = file.seek(SeekFrom::End(0))?;
         file.seek(SeekFrom::Start(0))?;
         debug!("start to decode a wan image");
 
@@ -62,8 +63,17 @@ impl WanImage {
         trace!("reading the animation info block");
         file.seek(SeekFrom::Start(pointer_to_anim_info))?;
         let pointer_meta_frame_reference_table = file.read_u32::<LE>()? as u64;
+        if pointer_meta_frame_reference_table > source_file_lenght {
+            return Err(WanError::PostFilePointer("meta frame reference table"));
+        }
         let pointer_particule_offset_table = file.read_u32::<LE>()? as u64;
+        if pointer_particule_offset_table > source_file_lenght {
+            return Err(WanError::PostFilePointer("particule offset table"));
+        };
         let pointer_animation_groups_table = file.read_u32::<LE>()? as u64;
+        if pointer_animation_groups_table > source_file_lenght {
+            return Err(WanError::PostFilePointer("animation groups table"));
+        }
         let amount_animation_group = file.read_u16::<LE>()?;
 
         //TODO
