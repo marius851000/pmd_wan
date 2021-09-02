@@ -152,6 +152,10 @@ impl WanImage {
 
         let mut raw_particule_table: Vec<u8>;
         if pointer_particule_offset_table > 0 {
+            if particule_table_end > source_file_lenght {
+                return Err(WanError::PostFilePointer("particle table end"));
+            };
+            trace!("copying the raw particle table (from {} to end at {})", pointer_particule_offset_table, particule_table_end);
             file.seek(SeekFrom::Start(pointer_particule_offset_table))?;
             raw_particule_table = vec![
                 0;
@@ -168,7 +172,7 @@ impl WanImage {
         } else {
             raw_particule_table = Vec::new();
         }
-
+    
         Ok(WanImage {
             image_store,
             meta_frame_store,

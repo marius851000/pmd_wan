@@ -11,6 +11,10 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.3"
+env_logger = "0.9.0"
+
+[profile.release]
+debug = true
 
 [dependencies.pmd_wan]
 path = ".."

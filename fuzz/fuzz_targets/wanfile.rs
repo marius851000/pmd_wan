@@ -4,6 +4,7 @@ extern crate pmd_wan;
 use std::io::Cursor;
 
 fuzz_target!(|data: &[u8]| {
+    //TODO: env_logger::init();
     let input = Cursor::new(data);
     let _result = pmd_wan::WanImage::new(input);
     /*match result {
