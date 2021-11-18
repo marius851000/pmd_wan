@@ -76,21 +76,7 @@ impl MetaFrame {
             h_flip,
             is_mosaic,
             pal_idx,
-            resolution: match (size_indice_y << 4) + size_indice_x {
-                0x00 => Some(Resolution { x: 8, y: 8 }),
-                0x01 => Some(Resolution { x: 16, y: 16 }),
-                0x02 => Some(Resolution { x: 32, y: 32 }),
-                0x03 => Some(Resolution { x: 64, y: 64 }),
-                0x10 => Some(Resolution { x: 16, y: 8 }),
-                0x20 => Some(Resolution { x: 8, y: 16 }),
-                0x11 => Some(Resolution { x: 32, y: 8 }),
-                0x21 => Some(Resolution { x: 8, y: 32 }),
-                0x12 => Some(Resolution { x: 32, y: 16 }),
-                0x22 => Some(Resolution { x: 16, y: 32 }),
-                0x13 => Some(Resolution { x: 64, y: 32 }),
-                0x23 => Some(Resolution { x: 32, y: 64 }),
-                _ => None, // seem to be normal
-            },
+            resolution: Resolution::from_indice(size_indice_x, size_indice_y)
         })
     }
 

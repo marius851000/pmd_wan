@@ -1,7 +1,7 @@
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom};
 
-use crate::{Palette, WanError, Resolution};
+use crate::{Palette, WanError, Resolution, Coordinate};
 
 #[derive(Debug)]
 pub struct ImageAssemblyEntry {
@@ -61,7 +61,7 @@ impl ImgPixelPointer {
         }
     }
 
-    fn next(&mut self) -> Resolution<u32> {
+    fn next(&mut self) -> Coordinate {
         let tile_width = 8;
         let tile_height = 8;
 
@@ -85,7 +85,7 @@ impl ImgPixelPointer {
                 }
             }
         }
-        Resolution::<u32> { x, y }
+        Coordinate { x, y }
     }
 }
 
@@ -148,7 +148,7 @@ impl Image {
         let mut img_pixel_pointer = ImgPixelPointer::new(resolution.x as u32, resolution.y as u32);
         let mut z_index = None;
 
-        let test_out_of_bound = |out_resolution: &Resolution<u32>| {
+        let test_out_of_bound = |out_resolution: &Coordinate| {
             let x_res = resolution.x as u32;
             let y_res = resolution.y as u32;
             if out_resolution.x >= x_res || out_resolution.y >= y_res {

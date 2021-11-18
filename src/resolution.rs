@@ -1,7 +1,28 @@
+/// Size of an [`Image`] (computed from [`MetaFrame`])
 #[derive(Debug, Copy, Clone)]
 pub struct Resolution<T> {
     pub x: T,
     pub y: T,
+}
+
+impl Resolution<u8> {
+    pub fn from_indice(indice_x: u8, indice_y: u8) -> Option<Self> {
+        match (indice_x, indice_y) {
+            (0, 0) => Some(Self { x: 8, y: 8 }),
+            (1, 0) => Some(Self { x: 16, y: 16 }),
+            (2, 0) => Some(Self { x: 32, y: 32 }),
+            (3, 0) => Some(Self { x: 64, y: 64 }),
+            (0, 1) => Some(Self { x: 16, y: 8 }),
+            (0, 2) => Some(Self { x: 8, y: 16 }),
+            (1, 1) => Some(Self { x: 32, y: 8 }),
+            (1, 2) => Some(Self { x: 8, y: 32 }),
+            (2, 1) => Some(Self { x: 32, y: 16 }),
+            (2, 2) => Some(Self { x: 16, y: 32 }),
+            (3, 1) => Some(Self { x: 64, y: 32 }),
+            (3, 2) => Some(Self { x: 32, y: 64 }),
+            _ => None,
+        }
+    }
 }
 
 /*impl Resolution<u8> {
