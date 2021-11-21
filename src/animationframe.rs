@@ -1,6 +1,7 @@
-use std::io::{Read};
-use byteorder::{LE, ReadBytesExt};
-use crate::{WanError};
+use crate::WanError;
+use binwrite::BinWrite;
+use byteorder::{ReadBytesExt, LE};
+use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct AnimationFrame {
@@ -37,14 +38,18 @@ impl AnimationFrame {
         self.duration == 0 && self.frame_id == 0
     }
 
-    /*pub fn write<F: Write>(file: &mut F, frame: &AnimationFrame) -> Result<(), WanError> {
-        wan_write_u8(file, frame.duration)?;
-        wan_write_u8(file, frame.flag)?;
-        wan_write_u16(file, frame.frame_id)?;
-        wan_write_i16(file, frame.offset_x)?;
-        wan_write_i16(file, frame.offset_y)?;
-        wan_write_i16(file, frame.shadow_offset_x)?;
-        wan_write_i16(file, frame.shadow_offset_y)?;
+    pub fn write<F: Write>(file: &mut F, frame: &AnimationFrame) -> Result<(), WanError> {
+        (
+            frame.duration,
+            frame.flag,
+            frame.frame_id,
+            frame.offset_x,
+            frame.offset_y,
+            frame.shadow_offset_x,
+            frame.shadow_offset_y,
+        )
+            .write(file)?;
+
         Ok(())
     }
 
@@ -61,5 +66,5 @@ impl AnimationFrame {
                 shadow_offset_y: 0,
             },
         )
-    }*/
+    }
 }

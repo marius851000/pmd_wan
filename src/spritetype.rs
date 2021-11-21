@@ -6,8 +6,7 @@ pub enum SpriteType {
 }
 
 impl SpriteType {
-    #[allow(dead_code)]
-    fn get_id(&self) -> u8 {
+    pub fn get_id(&self) -> u8 {
         match self {
             SpriteType::PropsUI => 0,
             SpriteType::Chara => 1,

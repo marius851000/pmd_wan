@@ -40,6 +40,9 @@ pub use animstore::AnimStore;
 mod animation;
 pub use animation::Animation;
 
+mod imagecompression;
+pub use imagecompression::*;
+
 fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
     if id < 8 {
         Some((byte >> (15 - id) << 15) >= 1)
@@ -56,5 +59,5 @@ fn wan_read_raw_4<F: std::io::Read>(file: &mut F) -> Result<[u8; 4], WanError> {
 
 pub struct Coordinate {
     x: u32,
-    y: u32
+    y: u32,
 }

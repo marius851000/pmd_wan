@@ -1,5 +1,5 @@
 use crate::{MetaFrame, WanError};
-use std::io::Read;
+use std::io::{Read, Write};
 
 #[derive(Debug)]
 pub struct MetaFrameGroup {
@@ -26,7 +26,7 @@ impl MetaFrameGroup {
         Ok(MetaFrameGroup { meta_frames_id })
     }
 
-    /*fn write<F: Write>(
+    pub fn write<F: Write>(
         file: &mut F,
         meta_frame_group: &MetaFrameGroup,
         meta_frames: &[MetaFrame],
@@ -39,5 +39,5 @@ impl MetaFrameGroup {
             previous_image = Some(l);
         }
         Ok(())
-    }*/
+    }
 }

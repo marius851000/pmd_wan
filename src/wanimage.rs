@@ -1,8 +1,10 @@
-use crate::{AnimStore, wan_read_raw_4};
+use crate::{wan_read_raw_4, AnimStore};
 use crate::{ImageStore, MetaFrameStore, Palette, SpriteType, WanError};
 
+use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
-use std::io::{Read, Seek, SeekFrom};
+use pmd_sir0::write_sir0_footer;
+use std::io::{Read, Seek, SeekFrom, Write};
 
 pub struct WanImage {
     pub image_store: ImageStore,
@@ -14,6 +16,7 @@ pub struct WanImage {
     pub is_256_color: bool,
     pub sprite_type: SpriteType,
     pub unk_1: u32,
+    pub unk2: u16,
 }
 
 impl WanImage {
@@ -93,7 +96,7 @@ impl WanImage {
             1 => true,
             color_id => return Err(WanError::InvalidColorNumber(color_id)),
         };
-        file.read_u16::<LE>()?; //unk
+        let unk2 = file.read_u16::<LE>()?;
         let amount_images = file.read_u16::<LE>()?;
 
         trace!("parsing the palette");
@@ -135,6 +138,10 @@ impl WanImage {
         // decode image
         trace!("reading the image data pointer table");
         file.seek(SeekFrom::Start(pointer_image_data_pointer_table))?;
+        trace!(
+            "start of the image part (source) : {}",
+            pointer_image_data_pointer_table
+        );
         let image_store = ImageStore::new_from_bytes(
             &mut file,
             amount_images as u32,
@@ -155,7 +162,11 @@ impl WanImage {
             if particule_table_end > source_file_lenght {
                 return Err(WanError::PostFilePointer("particle table end"));
             };
-            trace!("copying the raw particle table (from {} to end at {})", pointer_particule_offset_table, particule_table_end);
+            trace!(
+                "copying the raw particle table (from {} to end at {})",
+                pointer_particule_offset_table,
+                particule_table_end
+            );
             file.seek(SeekFrom::Start(pointer_particule_offset_table))?;
             raw_particule_table = vec![
                 0;
@@ -172,7 +183,7 @@ impl WanImage {
         } else {
             raw_particule_table = Vec::new();
         }
-    
+
         Ok(WanImage {
             image_store,
             meta_frame_store,
@@ -182,6 +193,7 @@ impl WanImage {
             is_256_color,
             sprite_type,
             unk_1,
+            unk2,
         })
     }
 
@@ -201,123 +213,164 @@ impl WanImage {
         None
     }
 
-    //TODO:
-    /*pub fn create_wan<F: Write + Seek>(wanimage: &WanImage, file: &mut F) -> Result<(), WanError> {
+    //TODO: check if the code is valide
+    pub fn create_wan<F: Write + Seek>(&self, file: &mut F) -> Result<(), WanError> {
         //TODO: transform all unwrap to chain_error error
         debug!("start creating a wan image");
 
         let mut sir0_offsets: Vec<u32> = vec![];
         // create the sir0 header
         trace!("creating the sir0 header");
-        file.write(&[0x53, 0x49, 0x52, 0x30]).unwrap(); // sir0 magic
+        file.write_all(&[0x53, 0x49, 0x52, 0x30]).unwrap(); // sir0 magic
 
         let sir0_pointer_header = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(sir0_pointer_header as u32);
-        wan_write_u32(file, 0)?; //sir0_pointer_header
+        0u32.write(file)?; //sir0_pointer_header
 
         let sir0_pointer_offset = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(sir0_pointer_offset as u32);
-        wan_write_u32(file, 0)?;
 
-        wan_write_u32(file, 0)?; // magic
+        (
+            0u32, 0u32, //magic
+        )
+            .write(file)?;
 
         // write meta-frame
-        trace!("start of meta frame reference: {}", file.seek(SeekFrom::Current(0))?);
-        let meta_frame_references = MetaFrameStore::write(file, &wanimage.meta_frame_store)?;
+        trace!(
+            "start of meta frame reference: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
+        let meta_frame_references = MetaFrameStore::write(file, &self.meta_frame_store)?;
 
-        trace!("start of the animation offset: {}", file.seek(SeekFrom::Current(0))?);
-        let animations_pointer = AnimStore::write(file, &wanimage.anim_store)?;
+        trace!(
+            "start of the animation offset: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
+        let animations_pointer = AnimStore::write(file, &self.anim_store)?;
 
         while file.seek(SeekFrom::Current(0))? % 4 != 0 {
             file.write_all(&[0xAA])?;
-        };
+        }
 
+        trace!(
+            "start of the image offset: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
 
-        trace!("start of the image offset: {}", file.seek(SeekFrom::Current(0))?);
-        let (image_offset, sir0_pointer_images) = ImageStore::write(file, &wanimage)?;
+        let (image_offset, sir0_pointer_images) = ImageStore::write(file, self)?;
 
         for pointer in sir0_pointer_images {
             sir0_offsets.push(pointer as u32);
-        };
-
+        }
 
         trace!("start of the palette: {}", file.seek(SeekFrom::Current(0))?);
-        let pointer_palette = wanimage.palette.write(file).unwrap();
+        let pointer_palette = self.palette.write(file).unwrap();
         //sir0_offsets.push(pointer_palette);
 
         sir0_offsets.push(pointer_palette as u32);
 
-        trace!("start of the meta_frame reference offset: {}", file.seek(SeekFrom::Current(0))?);
+        trace!(
+            "start of the meta_frame reference offset: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
         let meta_frame_reference_offset = file.seek(SeekFrom::Current(0))?;
         for reference in meta_frame_references {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-            wan_write_u32(file, reference).unwrap();
+            reference.write(file)?;
+        }
+
+        let particule_offset = if !self.raw_particule_table.is_empty() {
+            let particule_offset = file.seek(SeekFrom::Current(0))?;
+            trace!(
+                "start of the particule offset: {}",
+                file.seek(SeekFrom::Current(0))?
+            );
+            //HACK: particule offset table parsing is not implement (see the psycommand code of spriteditor)
+            file.write_all(&self.raw_particule_table).unwrap();
+            sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
+            Some(particule_offset)
+        } else {
+            None
         };
 
-        let particule_offset = file.seek(SeekFrom::Current(0))?;
-        trace!("start of the particule offset: {}", file.seek(SeekFrom::Current(0))?);
-        //HACK: particule offset table parsing is not implement (see the psycommand code of spriteditor)
-        file.write_all(&wanimage.raw_particule_table).unwrap();
-        sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-
-        trace!("start of the animation group reference: {}", file.seek(SeekFrom::Current(0))?);
-        let (animation_group_reference_offset, sir0_animation_pointer) = wanimage.anim_store.write_animation_group(file, &animations_pointer).unwrap();
+        trace!(
+            "start of the animation group reference: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
+        let (animation_group_reference_offset, sir0_animation_pointer) = self
+            .anim_store
+            .write_animation_group(file, &animations_pointer)
+            .unwrap();
         for pointer in sir0_animation_pointer {
             sir0_offsets.push(pointer as u32);
-        };
+        }
 
         //image offset
         let pointer_image_data_pointer_table = file.seek(SeekFrom::Current(0))?;
-        trace!("start of the image offset: {}", file.seek(SeekFrom::Current(0))?);
+        trace!(
+            "start of the image offset: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
         for offset in image_offset {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-            wan_write_u32(file, offset as u32).unwrap();
-        };
+            (offset as u32).write(file)?;
+        }
 
         // animation header
         let animation_info_offset = file.seek(SeekFrom::Current(0))?;
-        trace!("start of the animation header: {}", file.seek(SeekFrom::Current(0))?);
+        trace!(
+            "start of the animation header: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, meta_frame_reference_offset as u32).unwrap();
+        (meta_frame_reference_offset as u32).write(file)?;
+
+        if let Some(particule_offset) = particule_offset {
+            sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
+            (particule_offset as u32).write(file)?;
+        } else {
+            0u32.write(file)?;
+        }
+
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, particule_offset as u32).unwrap();
-        sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, animation_group_reference_offset as u32).unwrap();
-        let is_for_chara = wanimage.sprite_type == SpriteType::Chara;
-        wan_write_u16(file, (wanimage.anim_store.anim_groups.len()-if is_for_chara {7} else {0}) as u16).unwrap(); //HACK:
+        (animation_group_reference_offset as u32).write(file)?;
+
+        let is_for_chara = self.sprite_type == SpriteType::Chara;
+
+        //HACK:
+        ((self.anim_store.anim_groups.len() - if is_for_chara { 7 } else { 0 }) as u16)
+            .write(file)?;
 
         // HACK: check what does this mean
-        wan_write_u32(file, wanimage.unk_1).unwrap();
-        wan_write_u32(file, 0)?;
-        wan_write_u16(file, 0)?;
+        (self.unk_1, 0u32, 0u16).write(file)?;
 
         // images header
-        trace!("start of the images header: {}", file.seek(SeekFrom::Current(0))?);
+        trace!(
+            "start of the images header: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
         let image_info_offset = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, pointer_image_data_pointer_table as u32).unwrap();
-        sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, pointer_palette as u32).unwrap();
-        wan_write_u16(file, 0)?; //HACK: unknow
-        wan_write_u16(file, if wanimage.is_256_color {
-            1
-        } else {
-            0
-        }).unwrap();
+        (pointer_image_data_pointer_table as u32).write(file)?;
 
-        wan_write_u16(file, 1).unwrap(); //HACK: unknow
-        wan_write_u16(file, wanimage.image_store.len() as u16).unwrap();
+        sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
+        (
+            pointer_palette as u32,
+            0u16, //HACK: unknown
+            if self.is_256_color { 1u16 } else { 0u16 },
+            self.unk2,
+            self.image_store.len() as u16,
+        )
+            .write(file)?;
 
         // wan header
         let wan_header_pos = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, animation_info_offset as u32).unwrap();
+        (animation_info_offset as u32).write(file)?;
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        wan_write_u32(file, image_info_offset as u32).unwrap();
-        wan_write_u16(file, wanimage.sprite_type.get_id() as u16).unwrap();
+        (image_info_offset as u32, self.sprite_type.get_id() as u16).write(file)?;
 
-
-        wan_write_u16(file, 0)?;
+        0u16.write(file)?;
 
         while file.seek(SeekFrom::Current(0))? % 32 != 0 {
             file.write_all(&[0xAA])?;
@@ -326,21 +379,25 @@ impl WanImage {
         let sir0_offset_pos = file.seek(SeekFrom::Current(0))?;
         // write the sir0 ending
 
-        trace!("start of the sir0 list: {}", file.seek(SeekFrom::Current(0))?);
-        write_sir0_footer(file, sir0_offsets).unwrap();
+        trace!(
+            "start of the sir0 list: {}",
+            file.seek(SeekFrom::Current(0))?
+        );
+        write_sir0_footer(file, &sir0_offsets).unwrap();
 
-        while file.seek(SeekFrom::Current(0))? % 32 != 0 {
-            file.write_all(&[0xAA])?;
+        //padding
+        while file.seek(SeekFrom::Current(0))? % 16 != 0 {
+            file.write_all(&[0x00])?;
         }
 
         // write the sir0 header
         file.seek(SeekFrom::Start(sir0_pointer_header))?;
-        wan_write_u32(file, wan_header_pos as u32).unwrap();
+        (wan_header_pos as u32).write(file)?;
 
         file.seek(SeekFrom::Start(sir0_pointer_offset))?;
-        wan_write_u32(file, sir0_offset_pos as u32)?;
+        (sir0_offset_pos as u32).write(file)?;
 
         file.seek(SeekFrom::Start(0))?;
         Ok(())
-    }*/
+    }
 }

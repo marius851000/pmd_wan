@@ -25,8 +25,8 @@ impl Resolution<u8> {
     }
 }
 
-/*impl Resolution<u8> {
-    pub fn get_indice(self) -> Option<(u16, u16)> {
+impl Resolution<u8> {
+    pub fn get_indice(self) -> Option<(u8, u8)> {
         Some(match (self.y, self.x) {
             (8, 8) => (0, 0),
             (16, 16) => (0, 1),
@@ -43,4 +43,4 @@ impl Resolution<u8> {
             _ => return None,
         })
     }
-}*/
+}

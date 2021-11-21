@@ -1,12 +1,14 @@
 use crate::{wan_read_raw_4, WanError};
+use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 pub struct Palette {
     pub palette: Vec<(u8, u8, u8, u8)>,
 }
 
 impl Palette {
+    /// load the Palette. Assume the cursor it located at the palette header
     pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<Palette, WanError> {
         let mut palette = Vec::new();
         let pointer_palette_start = file.read_u32::<LE>()? as u64;
@@ -54,22 +56,22 @@ impl Palette {
         Err(WanError::CantFindColorInPalette)
     }
 
-    /*fn write<F: Write + Seek>(&self, file: &mut F) -> Result<u64, WanError> {
-        let palette_start_offset = file.seek(SeekFrom::Current(0))?;
+    pub fn write<F: Write + Seek>(&self, file: &mut F) -> Result<u64, WanError> {
+        let start_offset = file.seek(SeekFrom::Current(0))?;
         for color in &self.palette {
-            wan_write_u8(file, color.0)?;
-            wan_write_u8(file, color.1)?;
-            wan_write_u8(file, color.2)?;
-            wan_write_u8(file, color.3)?;
+            color.write(file)?;
         }
 
-        let palette_header_offset = file.seek(SeekFrom::Current(0))?;
-        wan_write_u32(file, palette_start_offset as u32)?;
-        wan_write_u16(file, 0)?; //unk
-        wan_write_u16(file, 16)?; //TODO: assume the picture is 4bit
-        wan_write_u32(file, 0xFF << 16)?; //unk
-        wan_write_u32(file, 0)?; //magic
+        let header_offset = file.seek(SeekFrom::Current(0))?;
+        (
+            start_offset as u32,
+            0u16, //unk
+            self.palette.len() as u16,
+            (0xFF << 16) as u32, //unk
+            0u32,                //magic
+        )
+            .write(file)?;
 
-        Ok(palette_header_offset)
-    }*/
+        Ok(header_offset)
+    }
 }

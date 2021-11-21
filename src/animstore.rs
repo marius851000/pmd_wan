@@ -1,6 +1,7 @@
-use std::io::{Read, Seek, SeekFrom};
-use byteorder::{LE, ReadBytesExt};
 use crate::{Animation, WanError};
+use binwrite::BinWrite;
+use byteorder::{ReadBytesExt, LE};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(Debug)]
 struct AnimGroupEntry {
@@ -124,7 +125,14 @@ impl AnimStore {
         self.animations.len()
     }
 
-    /*fn write<F: Write + Seek>(file: &mut F, anim_store: &AnimStore) -> Result<Vec<u64>, WanError> {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn write<F: Write + Seek>(
+        file: &mut F,
+        anim_store: &AnimStore,
+    ) -> Result<Vec<u64>, WanError> {
         let mut animations_pointer = vec![];
         let mut previous_animation: Option<&Animation> = None;
         let mut previous_pointer = None;
@@ -152,9 +160,9 @@ impl AnimStore {
             previous_pointer = Some(actual_pointer);
         }
         Ok(animations_pointer)
-    }*/
+    }
 
-    /*fn write_animation_group<F: Write + Seek>(
+    pub fn write_animation_group<F: Write + Seek>(
         &self,
         file: &mut F,
         animations_pointer: &[u64],
@@ -171,7 +179,7 @@ impl AnimStore {
             match anim_group {
                 None => {
                     anim_group_data.push(None);
-                    wan_write_u16(file, 0)?;
+                    (0u16).write(file)?;
                 }
                 Some(value) => {
                     anim_group_data.push(Some(AnimGroupData {
@@ -180,9 +188,7 @@ impl AnimStore {
                     }));
                     for anim_pos in 0..value.1 {
                         sir0_animation.push(file.seek(SeekFrom::Current(0))?);
-                        let value_to_write =
-                            animations_pointer[(value.0 as usize) + anim_pos] as u32;
-                        wan_write_u32(file, value_to_write)?;
+                        (animations_pointer[(value.0 as usize) + anim_pos] as u32).write(file)?;
                     }
                 }
             }
@@ -192,16 +198,14 @@ impl AnimStore {
 
         for actual_data in anim_group_data {
             match actual_data {
-                None => wan_write_u32(file, 0)?,
+                None => 0u32.write(file)?,
                 Some(data) => {
                     sir0_animation.push(file.seek(SeekFrom::Current(0))?);
-                    wan_write_u32(file, data.pointer)?;
-                    wan_write_u16(file, data.lenght)?;
-                    wan_write_u16(file, 0)?;
+                    (data.pointer, data.lenght, 0u16).write(file)?;
                 }
             };
         }
 
         Ok((animation_group_reference_offset, sir0_animation))
-    }*/
+    }
 }

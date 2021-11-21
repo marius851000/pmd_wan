@@ -1,14 +1,15 @@
+use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
-use crate::{Palette, WanError, Resolution, Coordinate};
+use crate::{CompressionMethod, Coordinate, Palette, Resolution, WanError};
 
 #[derive(Debug)]
 pub struct ImageAssemblyEntry {
-    pixel_src: u64,
-    pixel_amount: u64,
-    byte_amount: u64,
-    _z_index: u32,
+    pub pixel_src: u64,
+    pub pixel_amount: u64,
+    pub byte_amount: u64,
+    pub _z_index: u32,
 }
 
 impl ImageAssemblyEntry {
@@ -30,13 +31,16 @@ impl ImageAssemblyEntry {
         self.pixel_amount == 0 && self.pixel_src == 0
     }
 
-    /*fn write<F: Write>(&self, file: &mut F) -> Result<(), WanError> {
-        wan_write_u32(file, self.pixel_src as u32)?;
-        wan_write_u16(file, self.byte_amount as u16)?;
-        wan_write_u16(file, 0)?;
-        wan_write_u32(file, self._z_index)?;
+    pub fn write<F: Write>(&self, file: &mut F) -> Result<(), WanError> {
+        (
+            self.pixel_src as u32,
+            self.byte_amount as u16,
+            0u16,
+            self._z_index,
+        )
+            .write(file)?;
         Ok(())
-    }*/
+    }
 }
 
 /// an helper struct, that permit to know where to place the next pixel
@@ -158,6 +162,9 @@ impl Image {
             }
         };
 
+        trace!("{:#?}", img_asm_table);
+        assert_eq!(img_asm_table.len(), 1);
+
         for entry in &img_asm_table {
             if entry.pixel_src == 0 {
                 for _ in 0..entry.pixel_amount {
@@ -205,15 +212,11 @@ impl Image {
         Ok(Image { img, z_index })
     }
 
-    /*fn write<F: Write + Seek>(
+    fn get_pixel_list(
         &self,
-        file: &mut F,
+        group_resolution: (u32, u32),
         palette: &Palette,
-    ) -> Result<(u64, Vec<u64>), WanError> {
-        let _resolution = (self.img.width(), self.img.height());
-        // generate the pixel list
-        let group_resolution = (self.img.width() / 8, self.img.height() / 8);
-
+    ) -> Result<Vec<u8>, WanError> {
         let mut pixel_list: Vec<u8> = vec![]; //a value = a pixel (acording to the tileset). None is fully transparent
 
         for y_group in 0..group_resolution.1 {
@@ -242,187 +245,26 @@ impl Image {
                 }
             }
         }
-        // those value allow to have the same output of the original file
-        //TODO: make the value change if we don't need to have the same output
-        let min_transparent_to_compress = 32; //TODO: take care of the palette len
-        let multiple_of_value = 2;
-        let use_legacy_compression = true; //set to false to use a better compression algo
 
-        let mut assembly_table: Vec<ImageAssemblyEntry> = vec![];
+        Ok(pixel_list)
+    }
 
-        if !use_legacy_compression {
-            let mut number_of_byte_to_include = 0;
-            let mut byte_include_start = file.seek(SeekFrom::Current(0))?;
+    //TODO: check this is actually valid
+    pub fn write<F: Write + Seek>(
+        &self,
+        file: &mut F,
+        palette: &Palette,
+    ) -> Result<(u64, Vec<u64>), WanError> {
+        let _resolution = (self.img.width(), self.img.height());
+        // generate the pixel list
+        let group_resolution = (self.img.width() / 8, self.img.height() / 8);
 
-            let mut pixel_id = 0;
-            loop {
-                debug_assert!(pixel_id % 2 == 0);
-                let mut should_create_new_transparent_entry = false;
+        let pixel_list = self.get_pixel_list(group_resolution, palette)?;
 
-                if (pixel_id % multiple_of_value == 0)
-                    && (pixel_id + min_transparent_to_compress < pixel_list.len())
-                {
-                    let mut encontered_non_transparent = false;
-                    for l in 0..min_transparent_to_compress {
-                        if pixel_list[pixel_id + l] != 0 {
-                            encontered_non_transparent = true;
-                            break;
-                        };
-                    }
-                    if !encontered_non_transparent {
-                        should_create_new_transparent_entry = true;
-                    };
-                };
+        let compression_method = CompressionMethod::NoCompression;
 
-                if should_create_new_transparent_entry {
-                    //push the actual content
-                    if number_of_byte_to_include > 0 {
-                        assembly_table.push(ImageAssemblyEntry {
-                            pixel_src: byte_include_start,
-                            pixel_amount: number_of_byte_to_include * 2,
-                            byte_amount: number_of_byte_to_include,
-                            _z_index: self.z_index,
-                        });
-                        number_of_byte_to_include = 0;
-                        byte_include_start = file.seek(SeekFrom::Current(0))?;
-                    };
-                    //create new entry for transparent stuff
-                    //count the number of transparent tile
-                    let mut transparent_tile_nb = 0;
-                    loop {
-                        if pixel_id >= pixel_list.len() {
-                            break;
-                        };
-                        if pixel_list[pixel_id] == 0 {
-                            transparent_tile_nb += 1;
-                            pixel_id += 1;
-                        } else {
-                            break;
-                        };
-                    }
-                    if pixel_id % multiple_of_value != 0 {
-                        transparent_tile_nb -= pixel_id % multiple_of_value;
-                        pixel_id -= pixel_id % multiple_of_value;
-                    };
-                    assembly_table.push(ImageAssemblyEntry {
-                        pixel_src: 0,
-                        pixel_amount: transparent_tile_nb as u64,
-                        byte_amount: (transparent_tile_nb as u64) / 2, //TODO: take care of the tileset lenght
-                        _z_index: self.z_index,
-                    });
+        let mut assembly_table = compression_method.compress(self, &pixel_list, file)?;
 
-                    continue;
-                };
-
-                if pixel_id >= pixel_list.len() {
-                    break;
-                };
-                debug_assert!(pixel_list[pixel_id] < 16);
-                debug_assert!(pixel_list[pixel_id + 1] < 16);
-                wan_write_u8(file, (pixel_list[pixel_id] << 4) + pixel_list[pixel_id + 1])?;
-                pixel_id += 2;
-                number_of_byte_to_include += 1;
-            }
-            if number_of_byte_to_include > 0 {
-                assembly_table.push(ImageAssemblyEntry {
-                    pixel_src: byte_include_start,
-                    pixel_amount: number_of_byte_to_include * 2,
-                    byte_amount: number_of_byte_to_include,
-                    _z_index: self.z_index,
-                });
-            };
-        } else {
-            enum ActualEntry {
-                Null(u64, u32),      //lenght (pixel), z_index
-                Some(u64, u64, u32), // initial_offset, lenght (pixel), z_index
-            }
-
-            impl ActualEntry {
-                fn new(is_all_black: bool, start_offset: u64, z_index: u32) -> ActualEntry {
-                    if is_all_black {
-                        ActualEntry::Null(64, z_index)
-                    } else {
-                        ActualEntry::Some(start_offset, 64, z_index)
-                    }
-                }
-
-                fn to_assembly(&self) -> ImageAssemblyEntry {
-                    match self {
-                        ActualEntry::Null(lenght, z_index) => ImageAssemblyEntry {
-                            pixel_src: 0,
-                            pixel_amount: *lenght,
-                            byte_amount: *lenght / 2,
-                            _z_index: *z_index,
-                        },
-                        ActualEntry::Some(initial_offset, lenght, z_index) => ImageAssemblyEntry {
-                            pixel_src: *initial_offset,
-                            pixel_amount: *lenght,
-                            byte_amount: *lenght / 2,
-                            _z_index: *z_index,
-                        },
-                    }
-                }
-
-                fn advance(&self, lenght: u64) -> ActualEntry {
-                    match self {
-                        ActualEntry::Null(l, z) => ActualEntry::Null(*l + lenght, *z),
-                        ActualEntry::Some(offset, l, z) => {
-                            ActualEntry::Some(*offset, *l + lenght, *z)
-                        }
-                    }
-                }
-            }
-
-            let mut actual_entry: Option<ActualEntry> = None;
-
-            for loop_nb in 0..(group_resolution.0 * group_resolution.1) {
-                let mut this_area = vec![];
-                let mut is_all_black = true;
-                for l in 0..64 {
-                    let actual_pixel = pixel_list[(loop_nb * 64 + l) as usize];
-                    this_area.push(actual_pixel);
-                    if actual_pixel != 0 {
-                        is_all_black = false;
-                    };
-                }
-
-                let pos_before_area = file.seek(SeekFrom::Current(0))?;
-                if !is_all_black {
-                    for byte_id in 0..32 {
-                        wan_write_u8(
-                            file,
-                            (this_area[byte_id * 2] << 4) + this_area[byte_id * 2 + 1],
-                        )?;
-                    }
-                }
-
-                let need_to_create_new_entry = if actual_entry.is_none() {
-                    true
-                } else {
-                    match &actual_entry {
-                        Some(ActualEntry::Null(_, _)) => !is_all_black,
-                        Some(ActualEntry::Some(_, _, _)) => is_all_black,
-                        _ => panic!(),
-                    }
-                };
-
-                if need_to_create_new_entry {
-                    if let Some(entry) = actual_entry {
-                        assembly_table.push(entry.to_assembly())
-                    }
-
-                    actual_entry = Some(ActualEntry::new(
-                        is_all_black,
-                        pos_before_area,
-                        self.z_index,
-                    ));
-                } else {
-                    //TODO:
-                    actual_entry = Some(actual_entry.unwrap().advance(64));
-                }
-            }
-            assembly_table.push(actual_entry.unwrap().to_assembly())
-        }
         //insert empty entry
         assembly_table.push(ImageAssemblyEntry {
             pixel_src: 0,
@@ -443,5 +285,5 @@ impl Image {
         }
 
         Ok((assembly_table_offset, pointer))
-    }*/
+    }
 }

@@ -1,6 +1,6 @@
-use crate::{Image, MetaFrameStore, Palette, WanError};
+use crate::{Image, MetaFrameStore, Palette, WanError, WanImage};
 use byteorder::{ReadBytesExt, LE};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 pub struct ImageStore {
     pub images: Vec<Image>,
@@ -27,7 +27,7 @@ impl ImageStore {
         let mut images = Vec::new();
 
         for (image_id, image) in image_pointers.iter().enumerate() {
-            trace!("reading image n°{}", image_id);
+            trace!("reading image n°{} at {}", image_id, image);
             let (resolution, pal_idx) =
                 meta_frame_store.find_resolution_and_pal_idx_image(image_id as u32)?;
             let resolution = match resolution {
@@ -35,7 +35,7 @@ impl ImageStore {
                 Some(value) => value,
             };
             file.seek(SeekFrom::Start(*image))?;
-            let img = Image::new_from_bytes(file, resolution, pal_idx, &palette)?;
+            let img = Image::new_from_bytes(file, resolution, pal_idx, palette)?;
             images.push(img);
         }
 
@@ -46,7 +46,11 @@ impl ImageStore {
         self.images.len()
     }
 
-    /*fn write<F: Write + Seek>(
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn write<F: Write + Seek>(
         file: &mut F,
         wanimage: &WanImage,
     ) -> Result<(Vec<u64>, Vec<u64>), WanError> {
@@ -54,6 +58,10 @@ impl ImageStore {
         let mut sir0_pointer_images = vec![];
 
         for image in &wanimage.image_store.images {
+            trace!(
+                "image wrote at {}",
+                file.seek(SeekFrom::Current(0)).unwrap()
+            );
             let (assembly_table_offset, sir0_img_pointer) = image.write(file, &wanimage.palette)?;
             for pointer in sir0_img_pointer {
                 sir0_pointer_images.push(pointer)
@@ -61,5 +69,5 @@ impl ImageStore {
             image_offset.push(assembly_table_offset);
         }
         Ok((image_offset, sir0_pointer_images))
-    }*/
+    }
 }

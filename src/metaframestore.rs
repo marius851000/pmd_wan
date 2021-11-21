@@ -1,6 +1,6 @@
 use crate::{MetaFrame, MetaFrameGroup, Resolution, WanError};
 use byteorder::{ReadBytesExt, LE};
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 pub struct MetaFrameStore {
     pub meta_frames: Vec<MetaFrame>,
@@ -66,7 +66,7 @@ impl MetaFrameStore {
         Err(WanError::InvalidResolution)
     }
 
-    /*fn write<F: Write + Seek>(
+    pub fn write<F: Write + Seek>(
         file: &mut F,
         meta_frame_store: &MetaFrameStore,
     ) -> Result<Vec<u32>, WanError> {
@@ -83,5 +83,5 @@ impl MetaFrameStore {
         }
 
         Ok(meta_frame_references)
-    }*/
+    }
 }

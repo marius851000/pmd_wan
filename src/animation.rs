@@ -1,6 +1,5 @@
-use std::io::Read;
 use crate::{AnimationFrame, WanError};
-
+use std::io::{Read, Write};
 
 #[derive(Debug, PartialEq)]
 pub struct Animation {
@@ -24,11 +23,15 @@ impl Animation {
         self.frames.len()
     }
 
-    /*pub fn write<F: Write>(file: &mut F, animation: &Animation) -> Result<(), WanError> {
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn write<F: Write>(file: &mut F, animation: &Animation) -> Result<(), WanError> {
         for frame in &animation.frames {
             AnimationFrame::write(file, frame)?;
         }
         AnimationFrame::write_null(file)?;
         Ok(())
-    }*/
+    }
 }
