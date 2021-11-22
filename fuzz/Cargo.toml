@@ -17,7 +17,7 @@ env_logger = "0.9.0"
 debug = true
 
 [dependencies.pmd_wan]
-path = ".."
+path = "../pmd_wan"
 
 # Prevent this from interfering with workspaces
 [workspace]

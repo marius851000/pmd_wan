@@ -7,11 +7,12 @@ fuzz_target!(|data: &[u8]| {
     //TODO: env_logger::init();
     let input = Cursor::new(data);
     let _result = pmd_wan::WanImage::new(input);
-    /*match result {
+    match result {
         Err(_) => (),
         Ok(valid) => {
             let mut output = Cursor::new(Vec::new());
             pmd_wan::WanImage::create_wan(&valid, &mut output).unwrap(); //TODO: change the API
+            //TODO: check the equality
         }
-    }*/
+    }
 });
