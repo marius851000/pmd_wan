@@ -1,9 +1,10 @@
-use crate::{Image, MetaFrameStore, Palette, WanError, WanImage};
+use crate::{ImageBytes, MetaFrameStore, Palette, WanError, WanImage};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
+#[derive(PartialEq, Eq)]
 pub struct ImageStore {
-    pub images: Vec<Image>,
+    pub images: Vec<ImageBytes>,
 }
 
 impl ImageStore {
@@ -35,7 +36,7 @@ impl ImageStore {
                 Some(value) => value,
             };
             file.seek(SeekFrom::Start(*image))?;
-            let img = Image::new_from_bytes(file, resolution, pal_idx, palette)?;
+            let img = ImageBytes::new_from_bytes(file, resolution)?;
             images.push(img);
         }
 
@@ -62,7 +63,7 @@ impl ImageStore {
                 "image wrote at {}",
                 file.seek(SeekFrom::Current(0)).unwrap()
             );
-            let (assembly_table_offset, sir0_img_pointer) = image.write(file, &wanimage.palette)?;
+            let (assembly_table_offset, sir0_img_pointer) = image.write(file)?;
             for pointer in sir0_img_pointer {
                 sir0_pointer_images.push(pointer)
             }

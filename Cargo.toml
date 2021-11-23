@@ -1,4 +1,5 @@
 [workspace]
 members = [
-    "pmd_wan"
+    "pmd_wan",
+    "test_read_write"
 ]

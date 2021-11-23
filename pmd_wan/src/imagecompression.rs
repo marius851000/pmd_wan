@@ -2,7 +2,7 @@ use std::io::{Seek, SeekFrom, Write};
 
 use binwrite::BinWrite;
 
-use crate::{image::ImageAssemblyEntry, Image, WanError};
+use crate::{imagebytes::ImageAssemblyEntry, ImageBytes, WanError};
 
 pub enum CompressionMethod {
     CompressionMethodOriginal,
@@ -16,7 +16,7 @@ pub enum CompressionMethod {
 impl CompressionMethod {
     pub fn compress<F: Write + Seek>(
         &self,
-        image: &Image,
+        image: &ImageBytes,
         pixel_list: &[u8],
         file: &mut F,
     ) -> Result<Vec<ImageAssemblyEntry>, WanError> {
@@ -68,7 +68,7 @@ impl CompressionMethod {
 
                 let mut actual_entry: Option<ActualEntry> = None;
 
-                for loop_nb in 0..(image.img.width() / 8 * image.img.height() / 8) {
+                for (loop_nb, _chunk) in image.pixels.chunks_exact(64).enumerate() {
                     let mut this_area = vec![];
                     let mut is_all_black = true;
                     for l in 0..64 {

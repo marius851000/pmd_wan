@@ -1,0 +1,11 @@
+[package]
+name = "test_read_write"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pmd_wan = { path = "../pmd_wan" }
+clap = "3.0.0-beta.5"
+image = "0.23.14"

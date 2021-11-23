@@ -22,8 +22,8 @@ pub use metaframestore::MetaFrameStore;
 mod spritetype;
 pub use spritetype::SpriteType;
 
-mod image;
-pub use crate::image::Image;
+mod imagebytes;
+pub use crate::imagebytes::{ImageBytes, ImageBytesToImageError};
 
 mod palette;
 pub use palette::Palette;

@@ -11,6 +11,7 @@ struct AnimGroupEntry {
     id: u16,
 }
 
+#[derive(PartialEq, Eq)]
 pub struct AnimStore {
     pub animations: Vec<Animation>,
     pub copied_on_previous: Option<Vec<bool>>, //indicate if a sprite can copy on the previous. Will always copy if possible if None

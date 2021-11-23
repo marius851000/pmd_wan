@@ -3,6 +3,7 @@ use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct Palette {
     pub palette: Vec<(u8, u8, u8, u8)>,
 }
@@ -12,6 +13,8 @@ impl Palette {
     pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<Palette, WanError> {
         let mut palette = Vec::new();
         let pointer_palette_start = file.read_u32::<LE>()? as u64;
+        trace!("start of palette : {}", pointer_palette_start);
+
         file.read_u16::<LE>()?;
         let nb_color = file.read_u16::<LE>()?;
         wan_read_raw_4(file)?;
@@ -34,16 +37,25 @@ impl Palette {
         Ok(Palette { palette })
     }
 
-    pub fn get(&self, id: usize) -> Result<(u8, u8, u8, u8), WanError> {
+    /// Return the rgba color for the given color id and palette id.
+    /// Return [`Option::None`] if the color doesn't exist.
+    /// Note that the alpha range from 0 to 128 normally, thought this is not an hard guarantee.
+    pub fn get(&self, id: u8, palette_id: u16) -> Option<(u8, u8, u8, u8)> {
+        let id = (id as usize).saturating_add(palette_id as usize * 16);
         if id >= self.palette.len() {
-            return Err(WanError::PaletteOOB);
+            return None;
         };
-        Ok(self.palette[id])
+        Some(self.palette[id])
     }
 
     #[allow(dead_code)]
-    pub fn color_id(&self, target_color: (u8, u8, u8, u8)) -> Result<usize, WanError> {
-        for color_id in 0..self.palette.len() {
+    pub fn color_id(
+        &self,
+        target_color: (u8, u8, u8, u8),
+        palette_id: u16,
+    ) -> Result<usize, WanError> {
+        for color_id in (palette_id as usize) * 16..(palette_id as usize) * 16 + self.palette.len()
+        {
             if self.palette[color_id] == target_color {
                 return Ok(color_id);
             }

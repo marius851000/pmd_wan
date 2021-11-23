@@ -4,7 +4,8 @@ use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
-#[derive(Debug)]
+//TODO: add a to_image to convert to an [`image`] (and make it an optional dependancy btw)
+#[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrame {
     pub unk1: u16,
     pub unk2: u16,
@@ -30,7 +31,10 @@ impl MetaFrame {
         let image_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
                 None => return Err(WanError::ImageIDPointBackButFirstImage),
-                Some(value) => value,
+                Some(value) => {
+                    println!("was a -1");
+                    value
+                }
             },
             x => {
                 if x >= 0 {
@@ -103,6 +107,9 @@ impl MetaFrame {
                 }
             }
         };
+
+        println!("previous : {:?}", previous_image);
+        println!("image_index out : {}", image_index);
 
         (image_index, meta_frame.unk1).write(file)?;
 

@@ -1,8 +1,24 @@
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
+use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek, SeekFrom, Write};
+use thiserror::Error;
 
 use crate::{CompressionMethod, Coordinate, Palette, Resolution, WanError};
+
+#[derive(Error, Debug)]
+pub enum ImageBytesToImageError {
+    #[error("The new image you tried to create would end up with 0 pixels")]
+    ZeroSizedImage,
+    #[error("The image can't be created. The resolution is likely too big compared the size of this ImageBytes")]
+    CantCreateImage,
+    #[error("The color with the id {0} and the palette id {1} doesn't exist in the palette")]
+    UnknownColor(u8, u16),
+    #[error("The metaframe doesn't have a resolution")]
+    NoResolution,
+    #[error("The metaframe point to the ImageBytes {0}, which doesn't exist")]
+    NoImageBytes(usize),
+}
 
 #[derive(Debug)]
 pub struct ImageAssemblyEntry {
@@ -93,18 +109,18 @@ impl ImgPixelPointer {
     }
 }
 
-pub struct Image {
-    pub img: image::ImageBuffer<image::Rgba<u8>, Vec<u8>>,
+#[derive(PartialEq, Eq)]
+pub struct ImageBytes {
+    pub pixels: Vec<u8>,
     pub z_index: u32,
 }
 
-impl Image {
+impl ImageBytes {
     pub fn new_from_bytes<F: Read + Seek>(
         file: &mut F,
-        resolution: Resolution<u8>,
-        pal_idx: u16,
-        palette: &Palette,
-    ) -> Result<Image, WanError> {
+        //TODO: do not use the resolution (but instead use the end sequence symbol)
+        resolution: Resolution<u8>, //resolution is required to know the size of the area (assumed to be the same for all metaframe reading it)
+    ) -> Result<ImageBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;
 
@@ -146,8 +162,7 @@ impl Image {
             image_size
         );
 
-        // transform to image on the fly
-        let mut img = image::ImageBuffer::new(resolution.x as u32, resolution.y as u32);
+        let mut pixels = vec![0; resolution.x as usize * resolution.y as usize];
 
         let mut img_pixel_pointer = ImgPixelPointer::new(resolution.x as u32, resolution.y as u32);
         let mut z_index = None;
@@ -170,8 +185,7 @@ impl Image {
                 for _ in 0..entry.pixel_amount {
                     let pixel_pos = img_pixel_pointer.next();
                     test_out_of_bound(&pixel_pos)?;
-                    let pixel = img.get_pixel_mut(pixel_pos.x, pixel_pos.y);
-                    *pixel = image::Rgba([0, 0, 0, 0]);
+                    pixels[pixel_pos.y as usize * resolution.x as usize + pixel_pos.x as usize] = 0;
                 }
             } else {
                 file.seek(SeekFrom::Start(entry.pixel_src))?;
@@ -185,14 +199,8 @@ impl Image {
                     };
                     let pixel_pos = img_pixel_pointer.next();
                     test_out_of_bound(&pixel_pos)?;
-                    let pixel = img.get_pixel_mut(pixel_pos.x, pixel_pos.y);
-                    if color_id == 0 {
-                        *pixel = image::Rgba([0, 0, 0, 0]);
-                    } else {
-                        let color = palette.get((pal_idx * 16 + color_id as u16) as usize)?;
-                        let color = [color.0, color.1, color.2, 255];
-                        *pixel = image::Rgba(color);
-                    };
+                    pixels[pixel_pos.y as usize * resolution.x as usize + pixel_pos.x as usize] =
+                        color_id;
                 }
             };
             // check that all part of the image have the same z index
@@ -209,39 +217,16 @@ impl Image {
             None => return Err(WanError::NoZIndex),
         };
 
-        Ok(Image { img, z_index })
+        Ok(ImageBytes { pixels, z_index })
     }
 
-    fn get_pixel_list(
-        &self,
-        group_resolution: (u32, u32),
-        palette: &Palette,
-    ) -> Result<Vec<u8>, WanError> {
+    fn get_pixel_list(&self) -> Result<Vec<u8>, WanError> {
         let mut pixel_list: Vec<u8> = vec![]; //a value = a pixel (acording to the tileset). None is fully transparent
 
-        for y_group in 0..group_resolution.1 {
-            for x_group in 0..group_resolution.0 {
-                for in_group_y in 0..8 {
-                    for in_group_x in &[1, 0, 3, 2, 5, 4, 7, 6] {
-                        let real_x_pixel = x_group * 8 + in_group_x;
-                        let real_y_pixel = y_group * 8 + in_group_y;
-                        let real_color = self.img.get_pixel(real_x_pixel, real_y_pixel);
-                        let real_color_tuple = (
-                            real_color[0],
-                            real_color[1],
-                            real_color[2],
-                            match real_color[3] {
-                                255 => 128,
-                                0 => 0,
-                                _ => return Err(WanError::ImpossibleAlphaLevel),
-                            },
-                        );
-                        pixel_list.push(if real_color_tuple == (0, 0, 0, 0) {
-                            0
-                        } else {
-                            palette.color_id(real_color_tuple)? as u8
-                        });
-                    }
+        for chunk in self.pixels.chunks_exact(64) {
+            for in_group_y in 0..8 {
+                for in_group_x in &[1, 0, 3, 2, 5, 4, 7, 6] {
+                    pixel_list.push(chunk[in_group_y * 8 + in_group_x]);
                 }
             }
         }
@@ -250,16 +235,8 @@ impl Image {
     }
 
     //TODO: check this is actually valid
-    pub fn write<F: Write + Seek>(
-        &self,
-        file: &mut F,
-        palette: &Palette,
-    ) -> Result<(u64, Vec<u64>), WanError> {
-        let _resolution = (self.img.width(), self.img.height());
-        // generate the pixel list
-        let group_resolution = (self.img.width() / 8, self.img.height() / 8);
-
-        let pixel_list = self.get_pixel_list(group_resolution, palette)?;
+    pub fn write<F: Write + Seek>(&self, file: &mut F) -> Result<(u64, Vec<u64>), WanError> {
+        let pixel_list = self.get_pixel_list()?;
 
         let compression_method = CompressionMethod::NoCompression;
 
@@ -285,5 +262,34 @@ impl Image {
         }
 
         Ok((assembly_table_offset, pointer))
+    }
+
+    pub fn get_image(
+        &self,
+        palette: &Palette,
+        resolution: &Resolution<u8>,
+        palette_id: u16,
+    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
+        if resolution.x == 0 || resolution.y == 0 {
+            return Err(ImageBytesToImageError::ZeroSizedImage);
+        };
+
+        let mut pixels: Vec<u8> =
+            Vec::with_capacity(resolution.x as usize * resolution.y as usize * 4);
+        for pixel in &self.pixels {
+            let color = match palette.get(*pixel, palette_id) {
+                Some(c) => c,
+                None => return Err(ImageBytesToImageError::UnknownColor(*pixel, palette_id)),
+            };
+            let new_alpha = color.3.saturating_mul(2);
+            pixels.extend([color.0, color.1, color.2, new_alpha]);
+        }
+
+        let img = match ImageBuffer::from_vec(resolution.x as u32, resolution.y as u32, pixels) {
+            Some(img) => img,
+            None => return Err(ImageBytesToImageError::CantCreateImage),
+        };
+
+        Ok(img)
     }
 }

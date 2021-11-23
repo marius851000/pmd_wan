@@ -1,7 +1,7 @@
 use crate::{MetaFrame, WanError};
 use std::io::{Read, Write};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrameGroup {
     pub meta_frames_id: Vec<usize>,
 }
@@ -36,7 +36,7 @@ impl MetaFrameGroup {
             let meta_frames_id = meta_frame_group.meta_frames_id[l];
             let meta_frame_to_write = &meta_frames[meta_frames_id];
             MetaFrame::write(file, meta_frame_to_write, previous_image)?;
-            previous_image = Some(l);
+            previous_image = Some(meta_frame_to_write.image_index);
         }
         Ok(())
     }

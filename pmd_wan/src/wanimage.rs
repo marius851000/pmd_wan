@@ -1,11 +1,13 @@
-use crate::{wan_read_raw_4, AnimStore};
+use crate::{wan_read_raw_4, AnimStore, ImageBytesToImageError, MetaFrame};
 use crate::{ImageStore, MetaFrameStore, Palette, SpriteType, WanError};
 
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
+use image::{ImageBuffer, Rgba};
 use pmd_sir0::write_sir0_footer;
 use std::io::{Read, Seek, SeekFrom, Write};
 
+#[derive(PartialEq, Eq)]
 pub struct WanImage {
     pub image_store: ImageStore,
     pub meta_frame_store: MetaFrameStore,
@@ -236,13 +238,13 @@ impl WanImage {
             .write(file)?;
 
         // write meta-frame
-        trace!(
+        println!(
             "start of meta frame reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
         let meta_frame_references = MetaFrameStore::write(file, &self.meta_frame_store)?;
 
-        trace!(
+        println!(
             "start of the animation offset: {}",
             file.seek(SeekFrom::Current(0))?
         );
@@ -372,7 +374,7 @@ impl WanImage {
 
         0u16.write(file)?;
 
-        while file.seek(SeekFrom::Current(0))? % 32 != 0 {
+        while file.seek(SeekFrom::Current(0))? % 16 != 0 {
             file.write_all(&[0xAA])?;
         }
 
@@ -386,8 +388,14 @@ impl WanImage {
         write_sir0_footer(file, &sir0_offsets).unwrap();
 
         //padding
+        let mut is_first = true;
         while file.seek(SeekFrom::Current(0))? % 16 != 0 {
-            file.write_all(&[0x00])?;
+            if is_first {
+                file.write_all(&[0x00])?;
+            } else {
+                file.write_all(&[0xAA])?;
+            }
+            is_first = false;
         }
 
         // write the sir0 header
@@ -399,5 +407,24 @@ impl WanImage {
 
         file.seek(SeekFrom::Start(0))?;
         Ok(())
+    }
+
+    /// Return the image corresponding to the resolution and the palette of given meta-frame.
+    /// Doesn't perform flipping or any other transformation other than the resolution and the palette.
+    pub fn get_image_for_meta_frame(
+        &self,
+        metaframe: &MetaFrame,
+    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
+        let image_bytes = match self.image_store.images.get(metaframe.image_index) {
+            Some(b) => b,
+            None => return Err(ImageBytesToImageError::NoImageBytes(metaframe.image_index)),
+        };
+
+        let resolution = match &metaframe.resolution {
+            Some(r) => r,
+            None => return Err(ImageBytesToImageError::NoResolution),
+        };
+
+        image_bytes.get_image(&self.palette, resolution, metaframe.pal_idx)
     }
 }

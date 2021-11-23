@@ -1,7 +1,7 @@
 use crate::{AnimationFrame, WanError};
 use std::io::{Read, Write};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Animation {
     pub frames: Vec<AnimationFrame>,
 }

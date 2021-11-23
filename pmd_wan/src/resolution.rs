@@ -1,5 +1,5 @@
 /// Size of an [`Image`] (computed from [`MetaFrame`])
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Resolution<T> {
     pub x: T,
     pub y: T,

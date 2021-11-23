@@ -3,7 +3,7 @@ use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 pub struct AnimationFrame {
     pub duration: u8,
     pub flag: u8,
