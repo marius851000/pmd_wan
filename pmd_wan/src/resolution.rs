@@ -26,20 +26,22 @@ impl Resolution<u8> {
 }
 
 impl Resolution<u8> {
+    /// Return the indices for the given image resolution.
+    /// The first one is the X indices, and the second one, the Y indices
     pub fn get_indice(self) -> Option<(u8, u8)> {
-        Some(match (self.y, self.x) {
+        Some(match (self.x, self.y) {
             (8, 8) => (0, 0),
-            (16, 16) => (0, 1),
-            (32, 32) => (0, 2),
-            (64, 64) => (0, 3),
-            (16, 8) => (1, 0),
-            (8, 16) => (2, 0),
+            (16, 16) => (1, 0),
+            (32, 32) => (2, 0),
+            (64, 64) => (3, 0),
+            (16, 8) => (0, 1),
+            (8, 16) => (0, 2),
             (32, 8) => (1, 1),
-            (8, 32) => (2, 1),
-            (32, 16) => (1, 2),
+            (8, 32) => (1, 2),
+            (32, 16) => (2, 1),
             (16, 32) => (2, 2),
-            (64, 32) => (1, 3),
-            (32, 64) => (2, 3),
+            (64, 32) => (3, 1),
+            (32, 64) => (3, 2),
             _ => return None,
         })
     }

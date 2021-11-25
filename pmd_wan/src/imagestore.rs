@@ -1,4 +1,4 @@
-use crate::{ImageBytes, MetaFrameStore, Palette, WanError, WanImage};
+use crate::{ImageBytes, MetaFrameStore, WanError, WanImage};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -12,7 +12,6 @@ impl ImageStore {
         file: &mut F,
         amount_images: u32,
         meta_frame_store: &MetaFrameStore,
-        palette: &Palette,
     ) -> Result<ImageStore, WanError> {
         trace!("will read {} image", amount_images);
         let mut image_pointers: Vec<u64> = Vec::new(); //list of reference to image
@@ -29,7 +28,7 @@ impl ImageStore {
 
         for (image_id, image) in image_pointers.iter().enumerate() {
             trace!("reading image n°{} at {}", image_id, image);
-            let (resolution, pal_idx) =
+            let (resolution, _pal_idx) =
                 meta_frame_store.find_resolution_and_pal_idx_image(image_id as u32)?;
             let resolution = match resolution {
                 None => return Err(WanError::ImageWithoutResolution),

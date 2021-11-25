@@ -144,12 +144,8 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let image_store = ImageStore::new_from_bytes(
-            &mut file,
-            amount_images as u32,
-            &meta_frame_store,
-            &palette,
-        )?;
+        let image_store =
+            ImageStore::new_from_bytes(&mut file, amount_images as u32, &meta_frame_store)?;
 
         // decode animation
         let (anim_store, particule_table_end) = AnimStore::new(
@@ -238,13 +234,13 @@ impl WanImage {
             .write(file)?;
 
         // write meta-frame
-        println!(
+        trace!(
             "start of meta frame reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
         let meta_frame_references = MetaFrameStore::write(file, &self.meta_frame_store)?;
 
-        println!(
+        trace!(
             "start of the animation offset: {}",
             file.seek(SeekFrom::Current(0))?
         );

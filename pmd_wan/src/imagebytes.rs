@@ -4,7 +4,7 @@ use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-use crate::{CompressionMethod, Coordinate, Palette, Resolution, WanError};
+use crate::{CompressionMethod, Palette, Resolution, WanError};
 
 #[derive(Error, Debug)]
 pub enum ImageBytesToImageError {
@@ -59,67 +59,16 @@ impl ImageAssemblyEntry {
     }
 }
 
-/// an helper struct, that permit to know where to place the next pixel
-struct ImgPixelPointer {
-    xsize: u32,
-    //ysize: u32,
-    true_column: u32,
-    true_line: u32,
-    line: u32,
-    column: u32,
-}
-
-impl ImgPixelPointer {
-    fn new(resx: u32, _resy: u32) -> ImgPixelPointer {
-        ImgPixelPointer {
-            xsize: resx,
-            //ysize: resy,
-            true_column: 0,
-            true_line: 0,
-            line: 0,
-            column: 0,
-        }
-    }
-
-    fn next(&mut self) -> Coordinate {
-        let tile_width = 8;
-        let tile_height = 8;
-
-        let mut x = self.true_column * 8 + self.column;
-        match self.column % 2 {
-            0 => x += 1,
-            1 => x -= 1,
-            _ => panic!(),
-        };
-        let y = self.true_line * 8 + self.line;
-        self.column += 1;
-        if self.column >= tile_width {
-            self.column = 0;
-            self.line += 1;
-            if self.line >= tile_height {
-                self.line = 0;
-                self.true_column += 1;
-                if self.true_column >= self.xsize / tile_width {
-                    self.true_column = 0;
-                    self.true_line += 1;
-                }
-            }
-        }
-        Coordinate { x, y }
-    }
-}
-
 #[derive(PartialEq, Eq)]
 pub struct ImageBytes {
-    pub pixels: Vec<u8>,
+    pub mixed_pixels: Vec<u8>,
     pub z_index: u32,
 }
 
 impl ImageBytes {
     pub fn new_from_bytes<F: Read + Seek>(
         file: &mut F,
-        //TODO: do not use the resolution (but instead use the end sequence symbol)
-        resolution: Resolution<u8>, //resolution is required to know the size of the area (assumed to be the same for all metaframe reading it)
+        resolution: Resolution<u8>, //TODO: get rid of this
     ) -> Result<ImageBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;
@@ -162,45 +111,29 @@ impl ImageBytes {
             image_size
         );
 
-        let mut pixels = vec![0; resolution.x as usize * resolution.y as usize];
+        let mut mixed_pixels = Vec::new();
 
-        let mut img_pixel_pointer = ImgPixelPointer::new(resolution.x as u32, resolution.y as u32);
         let mut z_index = None;
 
-        let test_out_of_bound = |out_resolution: &Coordinate| {
-            let x_res = resolution.x as u32;
-            let y_res = resolution.y as u32;
-            if out_resolution.x >= x_res || out_resolution.y >= y_res {
-                Err(WanError::SpriteTooSmall)
-            } else {
-                Ok(())
-            }
-        };
-
         trace!("{:#?}", img_asm_table);
-        assert_eq!(img_asm_table.len(), 1);
 
         for entry in &img_asm_table {
             if entry.pixel_src == 0 {
                 for _ in 0..entry.pixel_amount {
-                    let pixel_pos = img_pixel_pointer.next();
-                    test_out_of_bound(&pixel_pos)?;
-                    pixels[pixel_pos.y as usize * resolution.x as usize + pixel_pos.x as usize] = 0;
+                    mixed_pixels.push(0);
                 }
             } else {
                 file.seek(SeekFrom::Start(entry.pixel_src))?;
                 let mut actual_byte = 0;
                 for loop_id in 0..entry.pixel_amount {
+                    //TODO: maybe it would be more appropriate if I switch those ? Maybe it's the way the original game use ?
                     let color_id = if loop_id % 2 == 0 {
                         actual_byte = file.read_u8()?;
                         actual_byte >> 4
                     } else {
                         (actual_byte << 4) >> 4
                     };
-                    let pixel_pos = img_pixel_pointer.next();
-                    test_out_of_bound(&pixel_pos)?;
-                    pixels[pixel_pos.y as usize * resolution.x as usize + pixel_pos.x as usize] =
-                        color_id;
+                    mixed_pixels.push(color_id);
                 }
             };
             // check that all part of the image have the same z index
@@ -217,10 +150,13 @@ impl ImageBytes {
             None => return Err(WanError::NoZIndex),
         };
 
-        Ok(ImageBytes { pixels, z_index })
+        Ok(ImageBytes {
+            mixed_pixels,
+            z_index,
+        })
     }
 
-    fn get_pixel_list(&self) -> Result<Vec<u8>, WanError> {
+    /*pub fn set_ordered_pixel() -> Result<Vec<u8>, WanError> {
         let mut pixel_list: Vec<u8> = vec![]; //a value = a pixel (acording to the tileset). None is fully transparent
 
         for chunk in self.pixels.chunks_exact(64) {
@@ -232,15 +168,13 @@ impl ImageBytes {
         }
 
         Ok(pixel_list)
-    }
+    }*/
 
     //TODO: check this is actually valid
     pub fn write<F: Write + Seek>(&self, file: &mut F) -> Result<(u64, Vec<u64>), WanError> {
-        let pixel_list = self.get_pixel_list()?;
-
         let compression_method = CompressionMethod::NoCompression;
 
-        let mut assembly_table = compression_method.compress(self, &pixel_list, file)?;
+        let mut assembly_table = compression_method.compress(self, &self.mixed_pixels, file)?;
 
         //insert empty entry
         assembly_table.push(ImageAssemblyEntry {
@@ -276,10 +210,11 @@ impl ImageBytes {
 
         let mut pixels: Vec<u8> =
             Vec::with_capacity(resolution.x as usize * resolution.y as usize * 4);
-        for pixel in &self.pixels {
-            let color = match palette.get(*pixel, palette_id) {
+
+        for pixel in decode_image_pixel(&self.mixed_pixels, resolution).unwrap() {
+            let color = match palette.get(pixel, palette_id) {
                 Some(c) => c,
-                None => return Err(ImageBytesToImageError::UnknownColor(*pixel, palette_id)),
+                None => return Err(ImageBytesToImageError::UnknownColor(pixel, palette_id)),
             };
             let new_alpha = color.3.saturating_mul(2);
             pixels.extend([color.0, color.1, color.2, new_alpha]);
@@ -292,4 +227,40 @@ impl ImageBytes {
 
         Ok(img)
     }
+}
+
+//TODO: Option -> Result
+/// Take the raw encoded image (from an [`ImageBytes`]), and decode them into a list of pixels
+pub fn decode_image_pixel(pixels: &[u8], resolution: &Resolution<u8>) -> Option<Vec<u8>> {
+    if resolution.x % 8 != 0 {
+        return None;
+    }
+    if resolution.y % 8 != 0 {
+        return None;
+    }
+    if resolution.x == 0 {
+        return None;
+    }
+    let mut dest = vec![0; resolution.x as usize * resolution.y as usize];
+    let mut chunk_x = 0;
+    let mut chunk_y = 0;
+    let max_chunk_x = resolution.x / 8 - 1;
+    for chunk in pixels.chunks_exact(64) {
+        let mut pixel_for_chunk = chunk.iter();
+        for line in 0..8 {
+            let line_start_offset =
+                (chunk_y as usize * 8 + line as usize) * resolution.x as usize + chunk_x as usize;
+            for row_pair in 0..4 {
+                //should not unwrap : 64 elements are guaranted, and this is looped 32 times
+                dest[line_start_offset + row_pair + 1] = *pixel_for_chunk.next().unwrap();
+                dest[line_start_offset + row_pair] = *pixel_for_chunk.next().unwrap();
+            }
+        }
+        chunk_x += 1;
+        if chunk_x > max_chunk_x {
+            chunk_x = 0;
+            chunk_y += 1;
+        };
+    }
+    Some(dest)
 }

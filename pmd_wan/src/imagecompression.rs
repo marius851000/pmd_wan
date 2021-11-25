@@ -68,7 +68,7 @@ impl CompressionMethod {
 
                 let mut actual_entry: Option<ActualEntry> = None;
 
-                for (loop_nb, _chunk) in image.pixels.chunks_exact(64).enumerate() {
+                for (loop_nb, _chunk) in pixel_list.chunks_exact(64).enumerate() {
                     let mut this_area = vec![];
                     let mut is_all_black = true;
                     for l in 0..64 {
