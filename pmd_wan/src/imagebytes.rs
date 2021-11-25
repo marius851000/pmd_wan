@@ -67,8 +67,7 @@ pub struct ImageBytes {
 
 impl ImageBytes {
     pub fn new_from_bytes<F: Read + Seek>(
-        file: &mut F,
-        resolution: Resolution<u8>, //TODO: get rid of this
+        file: &mut F
     ) -> Result<ImageBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;
@@ -101,11 +100,6 @@ impl ImageBytes {
             }
         }
         trace!(
-            "the resolution of this image is ({}, {})",
-            resolution.x,
-            resolution.y
-        );
-        trace!(
             "the image contain {} assembly entry, with an image size of {}.",
             img_asm_table.len(),
             image_size
@@ -126,7 +120,6 @@ impl ImageBytes {
                 file.seek(SeekFrom::Start(entry.pixel_src))?;
                 let mut actual_byte = 0;
                 for loop_id in 0..entry.pixel_amount {
-                    //TODO: maybe it would be more appropriate if I switch those ? Maybe it's the way the original game use ?
                     let color_id = if loop_id % 2 == 0 {
                         actual_byte = file.read_u8()?;
                         actual_byte >> 4
