@@ -35,7 +35,7 @@ impl ImageStore {
                 Some(value) => value,
             };
             file.seek(SeekFrom::Start(*image))?;
-            let img = ImageBytes::new_from_bytes(file, resolution)?;
+            let img = ImageBytes::new_from_bytes(file)?;
             images.push(img);
         }
 
