@@ -35,7 +35,7 @@ impl MetaFrameGroup {
         for l in 0..meta_frame_group.meta_frames_id.len() {
             let meta_frames_id = meta_frame_group.meta_frames_id[l];
             let meta_frame_to_write = &meta_frames[meta_frames_id];
-            MetaFrame::write(file, meta_frame_to_write, previous_image)?;
+            meta_frame_to_write.write(file, previous_image)?;
             previous_image = Some(meta_frame_to_write.image_index);
         }
         Ok(())
