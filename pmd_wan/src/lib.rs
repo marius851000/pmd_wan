@@ -44,7 +44,7 @@ mod imagecompression;
 pub use imagecompression::*;
 
 fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
-    if id < 8 {
+    if id < 16 {
         Some((byte >> (15 - id) << 15) >= 1)
     } else {
         None
