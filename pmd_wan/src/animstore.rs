@@ -10,16 +10,13 @@ struct AnimGroupEntry {
     id: u16,
 }
 
-//TODO: anim_groups contain Animation
-
 /// Contain all the [`Animation`], as well as all the animation group (a.k.a animation table in ppmdu sprite editor).
-/// An anim_groups entry is in the form (start animation id, lenght).
-/// An animation group usually contain the an [`Animation`] per rotation of the monster (the 8 ones, most/all of the time)
+/// Animation group are a list of [`Animation`]. An animation group usually have 8 entry, one per rotation of the monster.
 #[derive(PartialEq, Eq, Debug)]
 pub struct AnimStore {
-    pub animations: Vec<Animation>,
+    /// some stuff used to ensure perfect reproduçability. You should probably lease this to None
     pub copied_on_previous: Option<Vec<bool>>, //indicate if a sprite can copy on the previous. Will always copy if possible if None
-    pub anim_groups: Vec<Option<(usize, usize)>>, //usize1 = start, usize2 = lenght
+    pub anim_groups: Vec<Vec<Animation>>, //usize1 = start, usize2 = lenght
 }
 
 impl AnimStore {
@@ -81,31 +78,29 @@ impl AnimStore {
         };
 
         // read the Animation from the animation group data
-
-        let mut animations: Vec<Animation> = Vec::new();
         let mut copied_on_previous = Vec::new();
         let mut anim_groups_result = Vec::new();
         let mut check_last_anim_pos = 0;
 
         for anim_group in anim_groups {
             match anim_group {
-                None => anim_groups_result.push(None),
+                None => anim_groups_result.push(Vec::new()),
                 Some(anim_group_table) => {
-                    anim_groups_result.push(Some((animations.len(), anim_group_table.len())));
+                    let mut animation_in_group = Vec::new();
                     for animation in anim_group_table {
                         file.seek(SeekFrom::Start(animation))?;
                         copied_on_previous
                             .push(file.seek(SeekFrom::Current(0))? == check_last_anim_pos);
                         check_last_anim_pos = file.seek(SeekFrom::Current(0))?;
-                        animations.push(Animation::new(file)?);
+                        animation_in_group.push(Animation::new(file)?);
                     }
+                    anim_groups_result.push(animation_in_group)
                 }
             };
         }
 
         Ok((
             AnimStore {
-                animations,
                 copied_on_previous: Some(copied_on_previous),
                 anim_groups: anim_groups_result,
             },
@@ -113,44 +108,40 @@ impl AnimStore {
         ))
     }
 
-    pub fn len(&self) -> usize {
-        self.animations.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn write<F: Write + Seek>(
-        file: &mut F,
-        anim_store: &AnimStore,
-    ) -> Result<Vec<u64>, WanError> {
+    pub fn write<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<Vec<u64>> {
         let mut animations_pointer = vec![];
         let mut previous_animation: Option<&Animation> = None;
         let mut previous_pointer = None;
 
-        for loop_nb in 0..anim_store.animations.len() {
-            let animation = &anim_store.animations[loop_nb];
-            let can_copy_on_previous = match &anim_store.copied_on_previous {
-                None => true,
-                Some(value) => value[loop_nb],
-            };
-            let actual_pointer = file.seek(SeekFrom::Current(0))?;
-
-            if can_copy_on_previous {
-                if let Some(p_anim) = previous_animation {
-                    if *p_anim == *animation {
-                        animations_pointer.push(previous_pointer.unwrap());
-                        continue;
-                    }
+        let mut anim_counter = 0;
+        for animation_group in &self.anim_groups {
+            for animation in animation_group {
+                let can_copy_on_previous = match &self.copied_on_previous {
+                    None => true,
+                    Some(value) => value.get(anim_counter).copied().unwrap_or(true),
                 };
-            };
+                let actual_pointer = file.seek(SeekFrom::Current(0))?;
 
-            animations_pointer.push(actual_pointer);
-            Animation::write(file, animation)?;
-            previous_animation = Some(animation);
-            previous_pointer = Some(actual_pointer);
+                if can_copy_on_previous {
+                    if let Some(p_anim) = previous_animation {
+                        if *p_anim == *animation {
+                            //no panic: should never panic, as previous_pointer is defined with previous_animation, and we check previous_pointer for existance
+                            animations_pointer.push(previous_pointer.unwrap());
+                            anim_counter += 1;
+                            continue;
+                        }
+                    };
+                };
+
+                animations_pointer.push(actual_pointer);
+                Animation::write(file, animation)?;
+                previous_animation = Some(animation);
+                previous_pointer = Some(actual_pointer);
+
+                anim_counter += 1;
+            }
         }
+
         Ok(animations_pointer)
     }
 
@@ -168,27 +159,26 @@ impl AnimStore {
 
         let mut anim_group_data = Vec::new();
         let mut good_anim_group_meet = false;
+        let mut anim_counter = 0;
         for anim_group in &self.anim_groups {
-            match anim_group {
-                None => {
-                    anim_group_data.push(AnimGroupData {
-                        pointer: 0,
-                        lenght: 0,
-                    });
-                    if good_anim_group_meet {
-                        0u32.write(file)?;
-                    }
+            if anim_group.is_empty() {
+                anim_group_data.push(AnimGroupData {
+                    pointer: 0,
+                    lenght: 0,
+                });
+                if good_anim_group_meet {
+                    0u32.write(file)?;
                 }
-                Some(value) => {
-                    good_anim_group_meet = true;
-                    anim_group_data.push(AnimGroupData {
-                        pointer: file.seek(SeekFrom::Current(0))? as u32,
-                        lenght: value.1 as u32,
-                    });
-                    for anim_pos in 0..value.1 {
-                        sir0_animation.push(file.seek(SeekFrom::Current(0))?);
-                        (animations_pointer[(value.0 as usize) + anim_pos] as u32).write(file)?;
-                    }
+            } else {
+                good_anim_group_meet = true;
+                anim_group_data.push(AnimGroupData {
+                    pointer: file.seek(SeekFrom::Current(0))? as u32,
+                    lenght: anim_group.len() as u32,
+                });
+                for _ in anim_group {
+                    sir0_animation.push(file.seek(SeekFrom::Current(0))?);
+                    (animations_pointer[anim_counter] as u32).write(file)?;
+                    anim_counter += 1;
                 }
             }
         }

@@ -14,10 +14,10 @@ pub enum ImageBytesToImageError {
     CantCreateImage,
     #[error("The color with the id {0} and the palette id {1} doesn't exist in the palette")]
     UnknownColor(u8, u16),
-    #[error("The metaframe doesn't have a resolution")]
-    NoResolution,
     #[error("The metaframe point to the ImageBytes {0}, which doesn't exist")]
     NoImageBytes(usize),
+    #[error("Failed to decode the image")]
+    CantDecodeImage(#[from] DecodeImageError),
 }
 
 #[derive(Debug)]
@@ -111,9 +111,7 @@ impl ImageBytes {
 
         for entry in &img_asm_table {
             if entry.pixel_src == 0 {
-                for _ in 0..entry.pixel_amount {
-                    mixed_pixels.push(0);
-                }
+                mixed_pixels.extend(&vec![0; entry.pixel_amount as usize]);
             } else {
                 file.seek(SeekFrom::Start(entry.pixel_src))?;
                 let mut actual_byte = 0;
@@ -161,7 +159,6 @@ impl ImageBytes {
         Ok(pixel_list)
     }*/
 
-    //TODO: check this is actually valid
     pub fn write<F: Write + Seek>(
         &self,
         file: &mut F,
@@ -210,7 +207,7 @@ impl ImageBytes {
         let mut pixels: Vec<u8> =
             Vec::with_capacity(resolution.x as usize * resolution.y as usize * 4);
 
-        for pixel in decode_image_pixel(&self.mixed_pixels, resolution).unwrap() {
+        for pixel in decode_image_pixel(&self.mixed_pixels, resolution)? {
             let color = match palette.get(pixel, palette_id) {
                 Some(c) => c,
                 None => return Err(ImageBytesToImageError::UnknownColor(pixel, palette_id)),
@@ -228,17 +225,29 @@ impl ImageBytes {
     }
 }
 
-//TODO: Option -> Result
+#[derive(Error, Debug)]
+pub enum DecodeImageError {
+    #[error("The x resolution ({0}) isn't a multiple of 8")]
+    XResolutionNotMultipleEight(u8),
+    #[error("The y resolution ({0}) isn't a multiple of 8")]
+    YResolutionNotMultipleEight(u8),
+    #[error("The target resolution have no pixel (one of x or y resolution is 0)")]
+    NoPixel,
+}
+
 /// Take the raw encoded image (from an [`ImageBytes`]), and decode them into a list of pixels
-pub fn decode_image_pixel(pixels: &[u8], resolution: &Resolution<u8>) -> Option<Vec<u8>> {
+pub fn decode_image_pixel(
+    pixels: &[u8],
+    resolution: &Resolution<u8>,
+) -> Result<Vec<u8>, DecodeImageError> {
     if resolution.x % 8 != 0 {
-        return None;
+        return Err(DecodeImageError::XResolutionNotMultipleEight(resolution.x));
     }
     if resolution.y % 8 != 0 {
-        return None;
+        return Err(DecodeImageError::YResolutionNotMultipleEight(resolution.y));
     }
-    if resolution.x == 0 {
-        return None;
+    if resolution.x == 0 || resolution.y == 0 {
+        return Err(DecodeImageError::NoPixel);
     }
     let mut dest = vec![0; resolution.x as usize * resolution.y as usize];
     let mut chunk_x = 0;
@@ -250,7 +259,7 @@ pub fn decode_image_pixel(pixels: &[u8], resolution: &Resolution<u8>) -> Option<
             let line_start_offset =
                 (chunk_y as usize * 8 + line as usize) * resolution.x as usize + chunk_x as usize;
             for row_pair in 0..4 {
-                //should not unwrap : 64 elements are guaranted, and this is looped 8*4=32 times
+                //no panic : 64 elements are guaranted, and this is looped 8*4=32 times
                 dest[line_start_offset + row_pair + 1] = *pixel_for_chunk.next().unwrap();
                 dest[line_start_offset + row_pair] = *pixel_for_chunk.next().unwrap();
             }
@@ -261,5 +270,5 @@ pub fn decode_image_pixel(pixels: &[u8], resolution: &Resolution<u8>) -> Option<
             chunk_y += 1;
         };
     }
-    Some(dest)
+    Ok(dest)
 }

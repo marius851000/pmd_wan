@@ -56,8 +56,3 @@ fn wan_read_raw_4<F: std::io::Read>(file: &mut F) -> Result<[u8; 4], WanError> {
     file.read_exact(&mut buffer)?;
     Ok(buffer)
 }
-
-pub struct Coordinate {
-    x: u32,
-    y: u32,
-}

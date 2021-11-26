@@ -16,7 +16,7 @@ struct Opts {
 fn test_read_reencode<F: Read + Seek>(
     content: &mut F,
     source: &str,
-    shouldnt_be_byte_perfect: bool,
+    #[allow(unused_variables)] shouldnt_be_byte_perfect: bool,
 ) {
     println!("trying {}", source);
 
@@ -83,8 +83,8 @@ fn main() {
     env_logger::init();
 
     for (monster_file_name, decompress) in [
-        //("m_attack.bin", true),
         //TODO: many strange things here...
+        //("m_attack.bin", true),
         ("m_ground.bin", false),
         ("monster.bin", true),
     ] {
@@ -109,12 +109,6 @@ fn main() {
                     //they have a lot of 0 after the file... Take a look at the px decompressor, it may come from there
                     433 => true,
                     438 => true,
-                    _ => false,
-                }
-            } else if monster_file_name == "m_attack.bin" {
-                match sub_file_id {
-                    // this file is pretty strange (and the ppmdu can't decode it). TODO: take a more in-depth look
-                    43 => true,
                     _ => false,
                 }
             } else {

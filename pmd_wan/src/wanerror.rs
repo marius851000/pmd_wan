@@ -47,4 +47,6 @@ pub enum WanError {
     NonConstantIndexInImage,
     #[error("The pointer to {0} is reference content after the end of the file")]
     PostFilePointer(&'static str),
+    #[error("The resolution indices are invalid ({0} and {1})")]
+    InvalidResolutionIndice(u8, u8),
 }

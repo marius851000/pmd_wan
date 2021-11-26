@@ -87,14 +87,10 @@ impl CompressionMethod {
                         }
                     }
 
-                    let need_to_create_new_entry = if actual_entry.is_none() {
-                        true
-                    } else {
-                        match &actual_entry {
-                            Some(ActualEntry::Null(_, _)) => !is_all_black,
-                            Some(ActualEntry::Some(_, _, _)) => is_all_black,
-                            _ => panic!(),
-                        }
+                    let need_to_create_new_entry = match &actual_entry {
+                        Some(ActualEntry::Null(_, _)) => !is_all_black,
+                        Some(ActualEntry::Some(_, _, _)) => is_all_black,
+                        None => true,
                     };
 
                     if need_to_create_new_entry {
@@ -108,7 +104,7 @@ impl CompressionMethod {
                             image.z_index,
                         ));
                     } else {
-                        //TODO:
+                        // no panic : need_to_create_new_entry is false if actual_entry is none
                         actual_entry = Some(actual_entry.unwrap().advance(64));
                     }
                 }

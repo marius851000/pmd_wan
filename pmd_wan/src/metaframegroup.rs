@@ -1,3 +1,5 @@
+use anyhow::Context;
+
 use crate::{MetaFrame, WanError};
 use std::io::{Read, Write};
 
@@ -31,12 +33,14 @@ impl MetaFrameGroup {
         file: &mut F,
         meta_frame_group: &MetaFrameGroup,
         meta_frames: &[MetaFrame],
-    ) -> Result<(), WanError> {
+    ) -> anyhow::Result<()> {
         let mut previous_image: Option<usize> = None;
         for l in 0..meta_frame_group.meta_frames_id.len() {
             let meta_frames_id = meta_frame_group.meta_frames_id[l];
             let meta_frame_to_write = &meta_frames[meta_frames_id];
-            meta_frame_to_write.write(file, previous_image)?;
+            meta_frame_to_write
+                .write(file, previous_image)
+                .with_context(move || format!("Can't write the meta_frame {}", l))?;
             previous_image = Some(meta_frame_to_write.image_index);
         }
         Ok(())

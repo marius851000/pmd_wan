@@ -1,11 +1,11 @@
 use crate::get_bit_u16;
 use crate::Resolution;
 use crate::WanError;
+use anyhow::bail;
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
-//TODO: add a to_image to convert to an [`image`] (and make it an optional dependancy btw)
 /// A [`MetaFrame`] may reference an [`crate::ImageBytes`], that will form a single (or all if small enought) part of an [`crate::MetaFrameGroup`]
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrame {
@@ -22,7 +22,7 @@ pub struct MetaFrame {
     pub h_flip: bool,
     pub is_mosaic: bool,
     pub pal_idx: u16,
-    pub resolution: Option<Resolution<u8>>,
+    pub resolution: Resolution<u8>,
 }
 
 impl MetaFrame {
@@ -82,7 +82,15 @@ impl MetaFrame {
             h_flip,
             is_mosaic,
             pal_idx,
-            resolution: Resolution::from_indice(size_indice_x, size_indice_y),
+            resolution: match Resolution::from_indice(size_indice_x, size_indice_y) {
+                Some(r) => r,
+                None => {
+                    return Err(WanError::InvalidResolutionIndice(
+                        size_indice_x,
+                        size_indice_y,
+                    ))
+                }
+            },
         })
     }
 
@@ -94,7 +102,7 @@ impl MetaFrame {
         &self,
         file: &mut F,
         previous_image: Option<usize>,
-    ) -> Result<(), WanError> {
+    ) -> anyhow::Result<()> {
         let image_index: i16 = match previous_image {
             None => self.image_index as i16,
             Some(value) => {
@@ -108,14 +116,12 @@ impl MetaFrame {
 
         (image_index, self.unk1).write(file)?;
 
-        let (size_indice_x, size_indice_y) = match self.resolution {
-            Some(value) => match value.get_indice() {
-                Some(value) => value,
-                //HACK:
-                None => panic!(),
-            },
-            //HACK:
-            None => panic!(),
+        let (size_indice_x, size_indice_y) = match self.resolution.get_indice() {
+            Some(r) => r,
+            None => bail!(
+                "The resolution {:?} for an image can't be transformed into indices",
+                self.resolution
+            ),
         };
 
         let offset_y_data: u16 = ((size_indice_y as u16) << (8 + 6))

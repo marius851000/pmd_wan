@@ -1,4 +1,5 @@
 use crate::{MetaFrame, MetaFrameGroup, WanError};
+use anyhow::Context;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -58,7 +59,7 @@ impl MetaFrameStore {
     pub fn write<F: Write + Seek>(
         file: &mut F,
         meta_frame_store: &MetaFrameStore,
-    ) -> Result<Vec<u32>, WanError> {
+    ) -> anyhow::Result<Vec<u32>> {
         let nb_meta_frame = meta_frame_store.meta_frame_groups.len();
         let mut meta_frame_references = vec![];
 
@@ -68,7 +69,8 @@ impl MetaFrameStore {
                 file,
                 &meta_frame_store.meta_frame_groups[l],
                 &meta_frame_store.meta_frames,
-            )?;
+            )
+            .with_context(move || format!("can't write the meta frame group with id {}", l))?;
         }
 
         Ok(meta_frame_references)

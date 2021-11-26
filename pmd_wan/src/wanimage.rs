@@ -1,6 +1,7 @@
 use crate::{wan_read_raw_4, AnimStore, ImageBytesToImageError, MetaFrame};
 use crate::{ImageStore, MetaFrameStore, Palette, SpriteType, WanError};
 
+use anyhow::Context;
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use image::{ImageBuffer, Rgba};
@@ -55,10 +56,6 @@ impl WanImage {
             value => return Err(WanError::TypeOfSpriteUnknown(value)),
         };
         //unk #12
-        //TODO
-        /*if file.seek(SeekFrom::Current(0))? != sir0_pointer_header+10 { // an assertion
-            bail!("we are not at the good position after the wan header!!!");
-        }*/
 
         // third step: decode animation info block
         trace!("reading the animation info block");
@@ -77,10 +74,6 @@ impl WanImage {
         }
         let amount_animation_group = file.read_u16::<LE>()?;
 
-        //TODO
-        /*if file.seek(SeekFrom::Current(0))? != pointer_to_anim_info + 14 {
-            bail!("we are not at the good position after the animation info block!!!");
-        };*/
         let unk_1 = file.read_u32::<LE>()?;
 
         // fourth: decode image data info
@@ -98,10 +91,7 @@ impl WanImage {
         let amount_images = file.read_u16::<LE>()?;
 
         trace!("parsing the palette");
-        //TODO
-        /*if pointer_palette == 0 {
-            bail!("the palette pointer is equal to 0 !!!");
-        };*/
+
         file.seek(SeekFrom::Start(pointer_palette))?;
         let palette = Palette::new_from_bytes(&mut file)?;
 
@@ -205,15 +195,13 @@ impl WanImage {
         None
     }
 
-    //TODO: check if the code is valide
-    pub fn create_wan<F: Write + Seek>(&self, file: &mut F) -> Result<(), WanError> {
-        //TODO: transform all unwrap to chain_error error
+    pub fn create_wan<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<()> {
         debug!("start creating a wan image");
 
         let mut sir0_offsets: Vec<u32> = vec![];
         // create the sir0 header
         trace!("creating the sir0 header");
-        file.write_all(&[0x53, 0x49, 0x52, 0x30]).unwrap(); // sir0 magic
+        file.write_all(&[0x53, 0x49, 0x52, 0x30])?;
 
         let sir0_pointer_header = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(sir0_pointer_header as u32);
@@ -238,7 +226,7 @@ impl WanImage {
             "start of the animation offset: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let animations_pointer = AnimStore::write(file, &self.anim_store)?;
+        let animations_pointer = self.anim_store.write(file)?;
 
         while file.seek(SeekFrom::Current(0))? % 4 != 0 {
             file.write_all(&[0xAA])?;
@@ -256,7 +244,10 @@ impl WanImage {
         }
 
         trace!("start of the palette: {}", file.seek(SeekFrom::Current(0))?);
-        let pointer_palette = self.palette.write(file).unwrap();
+        let pointer_palette = self
+            .palette
+            .write(file)
+            .context("Failed to write the palette")?;
         //sir0_offsets.push(pointer_palette);
 
         sir0_offsets.push(pointer_palette as u32);
@@ -278,7 +269,7 @@ impl WanImage {
                 file.seek(SeekFrom::Current(0))?
             );
             //HACK: particule offset table parsing is not implement (see the psycommando code of ppmdu)
-            file.write_all(&self.raw_particule_table).unwrap();
+            file.write_all(&self.raw_particule_table)?;
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
             Some(particule_offset)
         } else {
@@ -292,7 +283,7 @@ impl WanImage {
         let (animation_group_reference_offset, sir0_animation_pointer) = self
             .anim_store
             .write_animation_group(file, &animations_pointer)
-            .unwrap();
+            .context("failed to write animations groups")?;
         for pointer in sir0_animation_pointer {
             sir0_offsets.push(pointer as u32);
         }
@@ -329,7 +320,6 @@ impl WanImage {
 
         (self.anim_store.anim_groups.len() as u16).write(file)?;
 
-        // HACK: check what does this mean
         (self.unk_1, 0u32, 0u16).write(file)?;
 
         // images header
@@ -344,7 +334,7 @@ impl WanImage {
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
         (
             pointer_palette as u32,
-            0u16, //HACK: unknown
+            0u16,
             if self.is_256_color { 1u16 } else { 0u16 },
             self.unk2,
             self.image_store.len() as u16,
@@ -371,7 +361,7 @@ impl WanImage {
             "start of the sir0 list: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        write_sir0_footer(file, &sir0_offsets).unwrap();
+        write_sir0_footer(file, &sir0_offsets).context("failed to write the Sir0 footer")?;
 
         //padding
         file.write_all(&[0x00])?;
@@ -401,11 +391,6 @@ impl WanImage {
             None => return Err(ImageBytesToImageError::NoImageBytes(metaframe.image_index)),
         };
 
-        let resolution = match &metaframe.resolution {
-            Some(r) => r,
-            None => return Err(ImageBytesToImageError::NoResolution),
-        };
-
-        image_bytes.get_image(&self.palette, resolution, metaframe.pal_idx)
+        image_bytes.get_image(&self.palette, &metaframe.resolution, metaframe.pal_idx)
     }
 }

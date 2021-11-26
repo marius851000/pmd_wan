@@ -52,10 +52,7 @@ impl ImageStore {
         let mut sir0_pointer_images = vec![];
 
         for image in &self.images {
-            trace!(
-                "image wrote at {}",
-                file.seek(SeekFrom::Current(0)).unwrap()
-            );
+            trace!("image wrote at {}", file.seek(SeekFrom::Current(0))?);
             let (assembly_table_offset, sir0_img_pointer) = image.write(file, sprite_type)?;
             for pointer in sir0_img_pointer {
                 sir0_pointer_images.push(pointer)
