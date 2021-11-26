@@ -5,6 +5,7 @@ use byteorder::{BigEndian, LE, ReadBytesExt};
 use std::io::{Read, Write};
 
 //TODO: add a to_image to convert to an [`image`] (and make it an optional dependancy btw)
+/// A [`MetaFrame`] may reference an [`crate::ImageBytes`], that will form a single (or all if small enought) part of an [`crate::MetaFrameGroup`]
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrame {
     pub unk1: u16,

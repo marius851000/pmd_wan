@@ -3,6 +3,7 @@ use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
+/// A single frame of an [`crate::Animation`]
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct AnimationFrame {
     pub duration: u8,

@@ -1,6 +1,8 @@
 use crate::{AnimationFrame, WanError};
 use std::io::{Read, Write};
 
+/// An [`Animation`] is a set of [`AnimationFrame`], that will be played one after the other, and that would loop most of the time.
+/// The duration between an [`AnimationFrame`] and the next one is contained in the [`AnimationFrame`]
 #[derive(Debug, PartialEq, Eq)]
 pub struct Animation {
     pub frames: Vec<AnimationFrame>,

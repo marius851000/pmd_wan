@@ -1,6 +1,7 @@
 use crate::{MetaFrame, WanError};
 use std::io::{Read, Write};
 
+/// A single frame of animation
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrameGroup {
     pub meta_frames_id: Vec<usize>,
