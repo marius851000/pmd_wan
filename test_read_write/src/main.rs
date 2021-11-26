@@ -1,7 +1,7 @@
 use clap::Parser;
 use pmd_cpack::CPack;
 use pmd_pkdpx::decompress_px;
-use pmd_wan::WanImage;
+use pmd_wan::{WanError, WanImage};
 use std::{
     fs::{read_dir, File},
     io::{Cursor, Read, Seek, SeekFrom, Write},
@@ -13,16 +13,24 @@ struct Opts {
     decompressed_pmd: PathBuf,
 }
 
-fn test_read_reencode<F: Read + Seek>(content: &mut F, add_seven_anim_group: bool, source: &str) {
+fn test_read_reencode<F: Read + Seek>(
+    content: &mut F,
+    source: &str,
+    shouldnt_be_byte_perfect: bool,
+) {
     println!("trying {}", source);
 
     let mut buffer_in = Vec::new();
     content.read_to_end(&mut buffer_in).unwrap();
     content.seek(SeekFrom::Start(0)).unwrap();
     //read
-    let original_wan = match WanImage::decode_wan(content, add_seven_anim_group) {
+    let original_wan = match WanImage::decode_wan(content) {
         Ok(r) => r,
         Err(e) => {
+            let e = match e {
+                WanError::ImageIDPointBackButFirstImage => return,
+                e => e,
+            };
             let mut f = File::create("./in.bin").unwrap();
             f.write_all(&buffer_in).unwrap();
             panic!("an error occured while reading the original file ({:?}). File written in \"in.bin\"", e);
@@ -38,7 +46,7 @@ fn test_read_reencode<F: Read + Seek>(content: &mut F, add_seven_anim_group: boo
     let mut rewrite_cursor = Cursor::new(rewriter_inner);
     //re-read
     rewrite_cursor.seek(SeekFrom::Start(0)).unwrap();
-    let reread_wan = WanImage::decode_wan(rewrite_cursor, add_seven_anim_group);
+    let reread_wan = WanImage::decode_wan(rewrite_cursor);
 
     let reread_wan = match reread_wan {
         Ok(r) => Some(r),
@@ -47,7 +55,9 @@ fn test_read_reencode<F: Read + Seek>(content: &mut F, add_seven_anim_group: boo
             None
         }
     };
+
     if reread_wan == None || reread_wan.unwrap() != original_wan {
+        //if !shouldnt_be_byte_perfect && buffer_in != buffer_out {
         // write the in.bin and out.bin file
         let mut in_file = File::create("in.bin").unwrap();
         in_file.write_all(&buffer_in).unwrap();
@@ -72,10 +82,11 @@ fn main() {
 
     env_logger::init();
 
-    for (monster_file_name, decompress, add_seven_anim_group) in [
-        ("m_ground.bin", false, true),
-        ("monster.bin", true, false),
-        ("m_attack.bin", true, false),
+    for (monster_file_name, decompress) in [
+        //("m_attack.bin", true),
+        //TODO: many strange things here...
+        ("m_ground.bin", false),
+        ("monster.bin", true),
     ] {
         let path = opts
             .decompressed_pmd
@@ -93,10 +104,26 @@ fn main() {
                 buffer
             };
             let mut cursor = Cursor::new(sub_file_vec);
+            let shouldnt_be_byte_perfect = if monster_file_name == "monster.bin" {
+                match sub_file_id {
+                    //they have a lot of 0 after the file... Take a look at the px decompressor, it may come from there
+                    433 => true,
+                    438 => true,
+                    _ => false,
+                }
+            } else if monster_file_name == "m_attack.bin" {
+                match sub_file_id {
+                    // this file is pretty strange (and the ppmdu can't decode it). TODO: take a more in-depth look
+                    43 => true,
+                    _ => false,
+                }
+            } else {
+                false
+            };
             test_read_reencode(
                 &mut cursor,
-                add_seven_anim_group,
                 &format!("{:?} sub file n°{}", path, sub_file_id),
+                shouldnt_be_byte_perfect,
             );
         }
     }
@@ -107,7 +134,7 @@ fn main() {
         let mut f = File::open(&path).unwrap();
         println!("{:?}", path);
         if path.extension().unwrap() == "wan" {
-            test_read_reencode(&mut f, false, &path.to_string_lossy());
+            test_read_reencode(&mut f, &path.to_string_lossy(), false);
         }
     }
     //test_read_reencode(&PathBuf::from("/home/marius/pmdeu/GROUND/d01p11b2.wan"));

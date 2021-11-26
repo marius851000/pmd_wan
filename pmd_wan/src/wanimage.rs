@@ -24,9 +24,7 @@ pub struct WanImage {
 impl WanImage {
     /// parse an image in the wan/wat format stored in the input file
     /// It assume that the file is decompressed
-    pub fn decode_wan<F: Read + Seek>(
-        mut file: F
-    ) -> Result<WanImage, WanError> {
+    pub fn decode_wan<F: Read + Seek>(mut file: F) -> Result<WanImage, WanError> {
         let source_file_lenght = file.seek(SeekFrom::End(0))?;
         file.seek(SeekFrom::Start(0))?;
         debug!("start to decode a wan image");
@@ -142,14 +140,13 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let image_store =
-            ImageStore::new_from_bytes(&mut file, amount_images as u32, &meta_frame_store)?;
+        let image_store = ImageStore::new_from_bytes(&mut file, amount_images as u32)?;
 
         // decode animation
         let (anim_store, particule_table_end) = AnimStore::new(
             &mut file,
             pointer_animation_groups_table,
-            amount_animation_group
+            amount_animation_group,
         )?;
 
         let mut raw_particule_table: Vec<u8>;
@@ -188,7 +185,7 @@ impl WanImage {
             is_256_color,
             sprite_type,
             unk_1,
-            unk2
+            unk2,
         })
     }
 
@@ -252,7 +249,7 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
 
-        let (image_offset, sir0_pointer_images) = ImageStore::write(file, self)?;
+        let (image_offset, sir0_pointer_images) = self.image_store.write(file, self.sprite_type)?;
 
         for pointer in sir0_pointer_images {
             sir0_offsets.push(pointer as u32);
@@ -377,14 +374,9 @@ impl WanImage {
         write_sir0_footer(file, &sir0_offsets).unwrap();
 
         //padding
-        let mut is_first = true;
+        file.write_all(&[0x00])?;
         while file.seek(SeekFrom::Current(0))? % 16 != 0 {
-            if is_first {
-                file.write_all(&[0x00])?;
-            } else {
-                file.write_all(&[0xAA])?;
-            }
-            is_first = false;
+            file.write_all(&[0xAA])?;
         }
 
         // write the sir0 header

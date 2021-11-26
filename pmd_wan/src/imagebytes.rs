@@ -4,7 +4,7 @@ use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-use crate::{CompressionMethod, Palette, Resolution, WanError};
+use crate::{CompressionMethod, Palette, Resolution, SpriteType, WanError};
 
 #[derive(Error, Debug)]
 pub enum ImageBytesToImageError {
@@ -66,9 +66,7 @@ pub struct ImageBytes {
 }
 
 impl ImageBytes {
-    pub fn new_from_bytes<F: Read + Seek>(
-        file: &mut F
-    ) -> Result<ImageBytes, WanError> {
+    pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<ImageBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;
 
@@ -164,8 +162,16 @@ impl ImageBytes {
     }*/
 
     //TODO: check this is actually valid
-    pub fn write<F: Write + Seek>(&self, file: &mut F) -> Result<(u64, Vec<u64>), WanError> {
-        let compression_method = CompressionMethod::NoCompression;
+    pub fn write<F: Write + Seek>(
+        &self,
+        file: &mut F,
+        sprite_type: SpriteType,
+    ) -> Result<(u64, Vec<u64>), WanError> {
+        let compression_method = if sprite_type == SpriteType::Chara {
+            CompressionMethod::CompressionMethodOriginal
+        } else {
+            CompressionMethod::NoCompression
+        };
 
         let mut assembly_table = compression_method.compress(self, &self.mixed_pixels, file)?;
 

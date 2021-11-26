@@ -1,4 +1,4 @@
-use crate::{ImageBytes, MetaFrameStore, WanError, WanImage};
+use crate::{ImageBytes, SpriteType, WanError};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -11,7 +11,6 @@ impl ImageStore {
     pub fn new_from_bytes<F: Read + Seek>(
         file: &mut F,
         amount_images: u32,
-        meta_frame_store: &MetaFrameStore,
     ) -> Result<ImageStore, WanError> {
         trace!("will read {} image", amount_images);
         let mut image_pointers: Vec<u64> = Vec::new(); //list of reference to image
@@ -28,12 +27,6 @@ impl ImageStore {
 
         for (image_id, image) in image_pointers.iter().enumerate() {
             trace!("reading image n°{} at {}", image_id, image);
-            let (resolution, _pal_idx) =
-                meta_frame_store.find_resolution_and_pal_idx_image(image_id as u32)?;
-            let resolution = match resolution {
-                None => return Err(WanError::ImageWithoutResolution),
-                Some(value) => value,
-            };
             file.seek(SeekFrom::Start(*image))?;
             let img = ImageBytes::new_from_bytes(file)?;
             images.push(img);
@@ -51,18 +44,19 @@ impl ImageStore {
     }
 
     pub fn write<F: Write + Seek>(
+        &self,
         file: &mut F,
-        wanimage: &WanImage,
+        sprite_type: SpriteType,
     ) -> Result<(Vec<u64>, Vec<u64>), WanError> {
         let mut image_offset = vec![];
         let mut sir0_pointer_images = vec![];
 
-        for image in &wanimage.image_store.images {
+        for image in &self.images {
             trace!(
                 "image wrote at {}",
                 file.seek(SeekFrom::Current(0)).unwrap()
             );
-            let (assembly_table_offset, sir0_img_pointer) = image.write(file)?;
+            let (assembly_table_offset, sir0_img_pointer) = image.write(file, sprite_type)?;
             for pointer in sir0_img_pointer {
                 sir0_pointer_images.push(pointer)
             }

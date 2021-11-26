@@ -1,7 +1,8 @@
 use crate::get_bit_u16;
-use crate::{Resolution, WanError};
-use binwrite::{BinWrite, Endian, WriterOption, writer_option_new};
-use byteorder::{BigEndian, LE, ReadBytesExt};
+use crate::Resolution;
+use crate::WanError;
+use binwrite::BinWrite;
+use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
 //TODO: add a to_image to convert to an [`image`] (and make it an optional dependancy btw)
@@ -33,9 +34,7 @@ impl MetaFrame {
         let image_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
                 None => return Err(WanError::ImageIDPointBackButFirstImage),
-                Some(value) => {
-                    value
-                }
+                Some(value) => value,
             },
             x => {
                 if x >= 0 {
@@ -65,7 +64,7 @@ impl MetaFrame {
         let is_last = get_bit_u16(offset_x_data, 4).unwrap();
         let unk5 = get_bit_u16(offset_x_data, 5).unwrap();
         let offset_x = (offset_x_data & 0x01FF) as i16 - 256; //range: 0-511
-        
+
         let unk2 = file.read_u16::<LE>()?;
         let pal_idx = ((0xF000 & unk2) >> 12) as u16;
 

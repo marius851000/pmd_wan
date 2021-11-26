@@ -173,7 +173,7 @@ impl AnimStore {
                 None => {
                     anim_group_data.push(AnimGroupData {
                         pointer: 0,
-                        lenght: 0
+                        lenght: 0,
                     });
                     if good_anim_group_meet {
                         0u32.write(file)?;

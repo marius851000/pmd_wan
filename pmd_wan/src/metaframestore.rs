@@ -1,4 +1,4 @@
-use crate::{MetaFrame, MetaFrameGroup, Resolution, WanError};
+use crate::{MetaFrame, MetaFrameGroup, WanError};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -53,18 +53,6 @@ impl MetaFrameStore {
             meta_frames,
             meta_frame_groups,
         })
-    }
-
-    pub fn find_resolution_and_pal_idx_image(
-        &self,
-        image_id: u32,
-    ) -> Result<(Option<Resolution<u8>>, u16), WanError> {
-        for actual_image in &self.meta_frames {
-            if actual_image.image_index == image_id as usize {
-                return Ok((actual_image.resolution, actual_image.pal_idx));
-            };
-        }
-        Err(WanError::InvalidResolution)
     }
 
     pub fn write<F: Write + Seek>(
