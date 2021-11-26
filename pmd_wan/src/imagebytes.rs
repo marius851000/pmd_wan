@@ -244,7 +244,7 @@ pub fn decode_image_pixel(pixels: &[u8], resolution: &Resolution<u8>) -> Option<
             let line_start_offset =
                 (chunk_y as usize * 8 + line as usize) * resolution.x as usize + chunk_x as usize;
             for row_pair in 0..4 {
-                //should not unwrap : 64 elements are guaranted, and this is looped 32 times
+                //should not unwrap : 64 elements are guaranted, and this is looped 8*4=32 times
                 dest[line_start_offset + row_pair + 1] = *pixel_for_chunk.next().unwrap();
                 dest[line_start_offset + row_pair] = *pixel_for_chunk.next().unwrap();
             }

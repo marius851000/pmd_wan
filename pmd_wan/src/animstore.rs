@@ -23,12 +23,12 @@ impl AnimStore {
         file: &mut F,
         pointer_animation_groups_table: u64,
         amount_animation_group: u16,
-        is_for_chara: bool,
+        add_seven_anim_group: bool,
     ) -> Result<(AnimStore, u64), WanError> {
         //TODO: rewrite this function, it seem to be too complicated to understand
         file.seek(SeekFrom::Start(pointer_animation_groups_table))?;
         let mut anim_group_entry: Vec<Option<AnimGroupEntry>> = Vec::new();
-        let add_for_chara = if is_for_chara { 7 } else { 0 };
+        let add_for_chara = if add_seven_anim_group { 7 } else { 0 };
         for animation_group_id in 0..amount_animation_group.checked_add(add_for_chara).ok_or(
             WanError::OverflowAddition(
                 amount_animation_group as u64,
@@ -44,11 +44,11 @@ impl AnimStore {
                 continue;
             };
             let group_lenght = file.read_u16::<LE>()?;
-            let _unk16 = file.read_u16::<LE>()?;
+            let unk16 = file.read_u16::<LE>()?;
             anim_group_entry.push(Some(AnimGroupEntry {
                 pointer,
                 group_lenght,
-                _unk16,
+                _unk16: unk16,
                 id: animation_group_id,
             }));
         }
@@ -92,6 +92,7 @@ impl AnimStore {
         let mut copied_on_previous = Vec::new();
         let mut anim_groups_result = Vec::new();
         let mut check_last_anim_pos = 0;
+
         for anim_group in anim_groups {
             match anim_group {
                 None => anim_groups_result.push(None),
@@ -179,8 +180,9 @@ impl AnimStore {
         for anim_group in &self.anim_groups {
             match anim_group {
                 None => {
+                    //TODO: should it really be disabled ?
+                    //0u16.write(file)?;
                     anim_group_data.push(None);
-                    (0u16).write(file)?;
                 }
                 Some(value) => {
                     anim_group_data.push(Some(AnimGroupData {

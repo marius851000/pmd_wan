@@ -19,16 +19,18 @@ pub struct WanImage {
     pub sprite_type: SpriteType,
     pub unk_1: u32,
     pub unk2: u16,
+    /// Some file (aka m_ground.bin) have additional animation group that aren't accounted in animation group count.
+    /// This will add seven new animation group entry.
+    pub add_seven_anim_group: bool,
 }
 
 impl WanImage {
-    pub fn new<F: Read + Seek>(b: F) -> Result<WanImage, WanError> {
-        WanImage::decode_wan(b)
-    }
-
     /// parse an image in the wan/wat format stored in the input file
     /// It assume that the file is decompressed
-    pub fn decode_wan<F: Read + Seek>(mut file: F) -> Result<WanImage, WanError> {
+    pub fn decode_wan<F: Read + Seek>(
+        mut file: F,
+        add_seven_anim_group: bool,
+    ) -> Result<WanImage, WanError> {
         let source_file_lenght = file.seek(SeekFrom::End(0))?;
         file.seek(SeekFrom::Start(0))?;
         debug!("start to decode a wan image");
@@ -152,7 +154,7 @@ impl WanImage {
             &mut file,
             pointer_animation_groups_table,
             amount_animation_group,
-            sprite_type == SpriteType::Chara,
+            add_seven_anim_group,
         )?;
 
         let mut raw_particule_table: Vec<u8>;
@@ -192,6 +194,7 @@ impl WanImage {
             sprite_type,
             unk_1,
             unk2,
+            add_seven_anim_group,
         })
     }
 
@@ -333,10 +336,9 @@ impl WanImage {
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
         (animation_group_reference_offset as u32).write(file)?;
 
-        let is_for_chara = self.sprite_type == SpriteType::Chara;
-
         //HACK:
-        ((self.anim_store.anim_groups.len() - if is_for_chara { 7 } else { 0 }) as u16)
+        ((self.anim_store.anim_groups.len() - if self.add_seven_anim_group { 7 } else { 0 })
+            as u16)
             .write(file)?;
 
         // HACK: check what does this mean

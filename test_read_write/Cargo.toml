@@ -7,5 +7,8 @@ edition = "2021"
 
 [dependencies]
 pmd_wan = { path = "../pmd_wan" }
+pmd_cpack = "1.0.0"
+pmd_pkdpx = "1.1.0"
 clap = "3.0.0-beta.5"
 image = "0.23.14"
+env_logger = "0.9.0"
