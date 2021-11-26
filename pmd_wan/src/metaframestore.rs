@@ -2,7 +2,7 @@ use crate::{MetaFrame, MetaFrameGroup, Resolution, WanError};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct MetaFrameStore {
     pub meta_frames: Vec<MetaFrame>,
     pub meta_frame_groups: Vec<MetaFrameGroup>,

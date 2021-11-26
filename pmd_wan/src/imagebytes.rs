@@ -59,7 +59,7 @@ impl ImageAssemblyEntry {
     }
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct ImageBytes {
     pub mixed_pixels: Vec<u8>,
     pub z_index: u32,

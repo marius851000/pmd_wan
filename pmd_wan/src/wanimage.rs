@@ -7,7 +7,7 @@ use image::{ImageBuffer, Rgba};
 use pmd_sir0::write_sir0_footer;
 use std::io::{Read, Seek, SeekFrom, Write};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct WanImage {
     pub image_store: ImageStore,
     pub meta_frame_store: MetaFrameStore,
@@ -19,17 +19,13 @@ pub struct WanImage {
     pub sprite_type: SpriteType,
     pub unk_1: u32,
     pub unk2: u16,
-    /// Some file (aka m_ground.bin) have additional animation group that aren't accounted in animation group count.
-    /// This will add seven new animation group entry.
-    pub add_seven_anim_group: bool,
 }
 
 impl WanImage {
     /// parse an image in the wan/wat format stored in the input file
     /// It assume that the file is decompressed
     pub fn decode_wan<F: Read + Seek>(
-        mut file: F,
-        add_seven_anim_group: bool,
+        mut file: F
     ) -> Result<WanImage, WanError> {
         let source_file_lenght = file.seek(SeekFrom::End(0))?;
         file.seek(SeekFrom::Start(0))?;
@@ -153,8 +149,7 @@ impl WanImage {
         let (anim_store, particule_table_end) = AnimStore::new(
             &mut file,
             pointer_animation_groups_table,
-            amount_animation_group,
-            add_seven_anim_group,
+            amount_animation_group
         )?;
 
         let mut raw_particule_table: Vec<u8>;
@@ -193,8 +188,7 @@ impl WanImage {
             is_256_color,
             sprite_type,
             unk_1,
-            unk2,
-            add_seven_anim_group,
+            unk2
         })
     }
 
@@ -286,7 +280,7 @@ impl WanImage {
                 "start of the particule offset: {}",
                 file.seek(SeekFrom::Current(0))?
             );
-            //HACK: particule offset table parsing is not implement (see the psycommand code of spriteditor)
+            //HACK: particule offset table parsing is not implement (see the psycommando code of ppmdu)
             file.write_all(&self.raw_particule_table).unwrap();
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
             Some(particule_offset)
@@ -336,10 +330,7 @@ impl WanImage {
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
         (animation_group_reference_offset as u32).write(file)?;
 
-        //HACK:
-        ((self.anim_store.anim_groups.len() - if self.add_seven_anim_group { 7 } else { 0 })
-            as u16)
-            .write(file)?;
+        (self.anim_store.anim_groups.len() as u16).write(file)?;
 
         // HACK: check what does this mean
         (self.unk_1, 0u32, 0u16).write(file)?;

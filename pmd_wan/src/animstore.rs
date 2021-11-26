@@ -6,8 +6,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 #[derive(Debug)]
 struct AnimGroupEntry {
     pointer: u32,
-    group_lenght: u16,
-    _unk16: u16,
+    group_lenght: u32,
     id: u16,
 }
 
@@ -28,34 +27,22 @@ impl AnimStore {
         file: &mut F,
         pointer_animation_groups_table: u64,
         amount_animation_group: u16,
-        add_seven_anim_group: bool,
     ) -> Result<(AnimStore, u64), WanError> {
         //TODO: rewrite this function, it seem to be too complicated to understand
         file.seek(SeekFrom::Start(pointer_animation_groups_table))?;
         let mut anim_group_entry: Vec<Option<AnimGroupEntry>> = Vec::new();
-        let add_for_chara = if add_seven_anim_group { 7 } else { 0 };
-        for animation_group_id in 0..amount_animation_group.checked_add(add_for_chara).ok_or(
-            WanError::OverflowAddition(
-                amount_animation_group as u64,
-                add_for_chara as u64,
-                "amount animation group",
-                "add for chara",
-            ),
-        )? {
-            //HACK: CRITICAL: (why is it ?)
+        for animation_group_id in 0..amount_animation_group {
             let pointer = file.read_u32::<LE>()?;
-            if pointer == 0 {
+            let length = file.read_u32::<LE>()?;
+            if pointer != 0 && length != 0 {
+                anim_group_entry.push(Some(AnimGroupEntry {
+                    pointer,
+                    group_lenght: length,
+                    id: animation_group_id,
+                }));
+            } else {
                 anim_group_entry.push(None);
-                continue;
-            };
-            let group_lenght = file.read_u16::<LE>()?;
-            let unk16 = file.read_u16::<LE>()?;
-            anim_group_entry.push(Some(AnimGroupEntry {
-                pointer,
-                group_lenght,
-                _unk16: unk16,
-                id: animation_group_id,
-            }));
+            }
         }
 
         let mut anim_groups: Vec<Option<Vec<u64>>> = Vec::new();
@@ -93,6 +80,8 @@ impl AnimStore {
             Some(value) => value,
         };
 
+        // read the Animation from the animation group data
+
         let mut animations: Vec<Animation> = Vec::new();
         let mut copied_on_previous = Vec::new();
         let mut anim_groups_result = Vec::new();
@@ -105,10 +94,6 @@ impl AnimStore {
                     anim_groups_result.push(Some((animations.len(), anim_group_table.len())));
                     for animation in anim_group_table {
                         file.seek(SeekFrom::Start(animation))?;
-                        //TODO: what is this error ?
-                        /*if check_last_anim_pos > file.seek(SeekFrom::Current(0))? {
-                            bail!("The check for the order of animation haven't verified.")
-                        };*/
                         copied_on_previous
                             .push(file.seek(SeekFrom::Current(0))? == check_last_anim_pos);
                         check_last_anim_pos = file.seek(SeekFrom::Current(0))?;
@@ -178,22 +163,28 @@ impl AnimStore {
 
         struct AnimGroupData {
             pointer: u32,
-            lenght: u16,
+            lenght: u32,
         }
 
-        let mut anim_group_data: Vec<Option<AnimGroupData>> = Vec::new();
+        let mut anim_group_data = Vec::new();
+        let mut good_anim_group_meet = false;
         for anim_group in &self.anim_groups {
             match anim_group {
                 None => {
-                    //TODO: should it really be disabled ?
-                    //0u16.write(file)?;
-                    anim_group_data.push(None);
+                    anim_group_data.push(AnimGroupData {
+                        pointer: 0,
+                        lenght: 0
+                    });
+                    if good_anim_group_meet {
+                        0u32.write(file)?;
+                    }
                 }
                 Some(value) => {
-                    anim_group_data.push(Some(AnimGroupData {
+                    good_anim_group_meet = true;
+                    anim_group_data.push(AnimGroupData {
                         pointer: file.seek(SeekFrom::Current(0))? as u32,
-                        lenght: value.1 as u16,
-                    }));
+                        lenght: value.1 as u32,
+                    });
                     for anim_pos in 0..value.1 {
                         sir0_animation.push(file.seek(SeekFrom::Current(0))?);
                         (animations_pointer[(value.0 as usize) + anim_pos] as u32).write(file)?;
@@ -204,14 +195,11 @@ impl AnimStore {
 
         let animation_group_reference_offset = file.seek(SeekFrom::Current(0))?;
 
-        for actual_data in anim_group_data {
-            match actual_data {
-                None => 0u32.write(file)?,
-                Some(data) => {
-                    sir0_animation.push(file.seek(SeekFrom::Current(0))?);
-                    (data.pointer, data.lenght, 0u16).write(file)?;
-                }
-            };
+        for data in anim_group_data {
+            if data.pointer != 0 && data.lenght != 0 {
+                sir0_animation.push(file.seek(SeekFrom::Current(0))?);
+            }
+            (data.pointer, data.lenght).write(file)?;
         }
 
         Ok((animation_group_reference_offset, sir0_animation))

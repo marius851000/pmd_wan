@@ -2,7 +2,7 @@ use crate::{ImageBytes, MetaFrameStore, WanError, WanImage};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct ImageStore {
     pub images: Vec<ImageBytes>,
 }
