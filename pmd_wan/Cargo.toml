@@ -1,6 +1,6 @@
 [package]
 name = "pmd_wan"
-version = "2.0.0"
+version = "2.0.1"
 authors = ["marius851000 <mariusdavid@laposte.net>"]
 edition = "2018"
 description = "A library that can read wan file, a sprite format used in pokemon mystery dungeon games"
