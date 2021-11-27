@@ -208,12 +208,16 @@ impl ImageBytes {
             Vec::with_capacity(resolution.x as usize * resolution.y as usize * 4);
 
         for pixel in decode_image_pixel(&self.mixed_pixels, resolution)? {
-            let color = match palette.get(pixel, palette_id) {
-                Some(c) => c,
-                None => return Err(ImageBytesToImageError::UnknownColor(pixel, palette_id)),
+            let mut color = if pixel == 0 {
+                [0, 0, 0, 0]
+            } else {
+                match palette.get(pixel, palette_id) {
+                    Some(c) => c,
+                    None => return Err(ImageBytesToImageError::UnknownColor(pixel, palette_id)),
+                }
             };
-            let new_alpha = color.3.saturating_mul(2);
-            pixels.extend([color.0, color.1, color.2, new_alpha]);
+            color[3] = color[3].saturating_mul(2);
+            pixels.extend(color);
         }
 
         let img = match ImageBuffer::from_vec(resolution.x as u32, resolution.y as u32, pixels) {
@@ -253,16 +257,19 @@ pub fn decode_image_pixel(
     let mut chunk_x = 0;
     let mut chunk_y = 0;
     let max_chunk_x = resolution.x / 8 - 1;
-    for chunk in pixels.chunks_exact(64) {
+    'main: for chunk in pixels.chunks_exact(64) {
         let mut pixel_for_chunk = chunk.iter();
         for line in 0..8 {
             let line_start_offset =
-                (chunk_y as usize * 8 + line as usize) * resolution.x as usize + chunk_x as usize;
+                (chunk_y as usize * 8 + line as usize) * resolution.x as usize + chunk_x as usize * 8;
             for row_pair in 0..4 {
                 //no panic : 64 elements are guaranted, and this is looped 8*4=32 times
-                dest[line_start_offset + row_pair + 1] = *pixel_for_chunk.next().unwrap();
-                dest[line_start_offset + row_pair] = *pixel_for_chunk.next().unwrap();
-            }
+                match dest.get_mut(line_start_offset + row_pair * 2 + 1) {
+                    Some(entry) => *entry = *pixel_for_chunk.next().unwrap(),
+                    None => break 'main,
+                }
+                dest[line_start_offset + row_pair * 2] = *pixel_for_chunk.next().unwrap();
+            };
         }
         chunk_x += 1;
         if chunk_x > max_chunk_x {
