@@ -5,7 +5,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct Palette {
-    pub palette: Vec<(u8, u8, u8, u8)>,
+    pub palette: Vec<[u8; 4]>,
 }
 
 impl Palette {
@@ -32,7 +32,7 @@ impl Palette {
             let green = file.read_u8()?;
             let blue = file.read_u8()?;
             let alpha = file.read_u8()?;
-            palette.push((red, green, blue, alpha));
+            palette.push([red, green, blue, alpha]);
         }
         Ok(Palette { palette })
     }
@@ -40,7 +40,7 @@ impl Palette {
     /// Return the rgba color for the given color id and palette id.
     /// Return [`Option::None`] if the color doesn't exist.
     /// Note that the alpha range from 0 to 128 normally, thought this is not an hard guarantee.
-    pub fn get(&self, id: u8, palette_id: u16) -> Option<(u8, u8, u8, u8)> {
+    pub fn get(&self, id: u8, palette_id: u16) -> Option<[u8; 4]> {
         let id = (id as usize).saturating_add(palette_id as usize * 16);
         if id >= self.palette.len() {
             return None;
@@ -49,11 +49,7 @@ impl Palette {
     }
 
     #[allow(dead_code)]
-    pub fn color_id(
-        &self,
-        target_color: (u8, u8, u8, u8),
-        palette_id: u16,
-    ) -> Result<usize, WanError> {
+    pub fn color_id(&self, target_color: [u8; 4], palette_id: u16) -> Result<usize, WanError> {
         for color_id in (palette_id as usize) * 16..(palette_id as usize) * 16 + self.palette.len()
         {
             if self.palette[color_id] == target_color {
