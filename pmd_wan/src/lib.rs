@@ -23,7 +23,9 @@ mod spritetype;
 pub use spritetype::SpriteType;
 
 mod imagebytes;
-pub use crate::imagebytes::{decode_image_pixel, ImageBytes, ImageBytesToImageError};
+pub use crate::imagebytes::{
+    decode_image_pixel, DecodeImageError, ImageBytes, ImageBytesToImageError,
+};
 
 mod palette;
 pub use palette::Palette;
