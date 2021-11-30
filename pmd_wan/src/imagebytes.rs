@@ -1,4 +1,4 @@
-use anyhow::{Context, bail};
+use anyhow::{bail, Context};
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use image::{ImageBuffer, Rgba};
@@ -283,10 +283,16 @@ pub fn decode_image_pixel(
 
 pub fn encode_image_pixel(pixels: &[u8], resolution: &Resolution) -> anyhow::Result<Vec<u8>> {
     if resolution.x % 8 != 0 || resolution.y % 8 != 0 {
-        bail!("The image resolution ({:?}) isn't a multiple of 8", resolution);
+        bail!(
+            "The image resolution ({:?}) isn't a multiple of 8",
+            resolution
+        );
     }
     if resolution.x == 0 || resolution.y == 0 {
-        bail!("The image with the resolution {:?} have no pixel", resolution)
+        bail!(
+            "The image with the resolution {:?} have no pixel",
+            resolution
+        )
     }
     // will iterate over each line, placing them at the correct place in the output buffer
     let mut output_buffer = vec![0; resolution.x as usize * resolution.y as usize];
@@ -294,7 +300,9 @@ pub fn encode_image_pixel(pixels: &[u8], resolution: &Resolution) -> anyhow::Res
     for chunk_column in 0..(resolution.y / 8) {
         for sub_chunk_line in 0..8 {
             for chunk_row in 0..(resolution.x / 8) {
-                let chunk_row_data = pixel_chunk_line_iter.next().context("The input buffer is too small")?;
+                let chunk_row_data = pixel_chunk_line_iter
+                    .next()
+                    .context("The input buffer is too small")?;
                 let number_chunk_ahead: usize =
                     chunk_column as usize * (resolution.x / 8) as usize + chunk_row as usize;
                 let pos_total = number_chunk_ahead * 64 + sub_chunk_line * 8;
