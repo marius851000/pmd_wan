@@ -13,10 +13,10 @@ pub struct MetaFrame {
     /// Seems to be related to allocation. Each MetaFrame in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
     /// This can't be generalised to every sprites
     pub unk2: u16,
-    /// most of the time is equal to offset_y < 0
-    pub unk3: bool,
-    /// most of the time is equal to offset_y >= 0
-    pub unk4: bool,
+    /// Two value with unknown property in the offset y data.
+    /// most of the time, the unk3 is equal to offset_y < 0, and unk4 the inverse (will be automatically computed if set to None)
+    /// otherwise the two boolean in the tuple will be used
+    pub unk3_4: Option<(bool, bool)>,
     pub unk5: bool, // maybe is "invert palette color"
     pub image_index: usize,
     pub offset_y: i8,
@@ -62,6 +62,20 @@ impl MetaFrame {
         let unk4 = get_bit_u16(offset_y_data, 6).unwrap();
         let offset_y = (offset_y_data & 0x00FF) as i8; //range: 0-255 (integer)
 
+        let unk3_4 = if offset_y < 0 {
+            if unk3 && !unk4 {
+                None
+            } else {
+                Some((unk3, unk4))
+            }
+        } else {
+            if !unk3 && unk4 {
+                None
+            } else {
+                Some((unk3, unk4))
+            }
+        };
+
         let offset_x_data = file.read_u16::<LE>()?;
         let size_indice_x = ((0xC000 & offset_x_data) >> (8 + 6)) as u8;
         let v_flip = get_bit_u16(offset_x_data, 2).unwrap(); //as no panic as before
@@ -77,8 +91,7 @@ impl MetaFrame {
             MetaFrame {
                 unk1,
                 unk2,
-                unk3,
-                unk4,
+                unk3_4,
                 unk5,
                 image_index,
                 offset_x,
@@ -128,10 +141,18 @@ impl MetaFrame {
             ),
         };
 
+        let (unk3, unk4) = match self.unk3_4 {
+            Some((unk3, unk4)) => (unk3, unk4),
+            None => {
+                let unk3 = self.offset_y < 0;
+                (unk3, !unk3)
+            }
+        };
+
         let offset_y_data: u16 = ((size_indice_y as u16) << (8 + 6))
             + if self.is_mosaic { 1 << (8 + 4) } else { 0 }
-            + ((self.unk4 as u16) << (8 + 1))
-            + ((self.unk3 as u16) << 8)
+            + ((unk4 as u16) << (8 + 1))
+            + ((unk3 as u16) << 8)
             + ((self.offset_y as u16) & 0x00FF);
 
         let written_offset_x = self.offset_x + 256;
