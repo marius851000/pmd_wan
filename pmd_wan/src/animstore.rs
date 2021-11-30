@@ -12,7 +12,7 @@ struct AnimGroupEntry {
 
 /// Contain all the [`Animation`], as well as all the animation group (a.k.a animation table in ppmdu sprite editor).
 /// Animation group are a list of [`Animation`]. An animation group usually have 8 entry, one per rotation of the monster.
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub struct AnimStore {
     /// some stuff used to ensure perfect reproduçability. You should probably lease this to None
     pub copied_on_previous: Option<Vec<bool>>, //indicate if a sprite can copy on the previous. Will always copy if possible if None

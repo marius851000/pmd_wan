@@ -220,7 +220,7 @@ impl WanImage {
             "start of meta frame reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let meta_frame_references = MetaFrameStore::write(file, &self.meta_frame_store)?;
+        let meta_frame_references = self.meta_frame_store.write(file)?;
 
         trace!(
             "start of the animation offset: {}",

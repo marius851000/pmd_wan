@@ -1,11 +1,10 @@
-use crate::{MetaFrame, MetaFrameGroup, WanError};
+use crate::{MetaFrameGroup, WanError};
 use anyhow::Context;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Default)]
 pub struct MetaFrameStore {
-    pub meta_frames: Vec<MetaFrame>,
     pub meta_frame_groups: Vec<MetaFrameGroup>,
 }
 
@@ -15,7 +14,6 @@ impl MetaFrameStore {
         file: &mut F,
         nb_meta_frame: u64,
     ) -> Result<MetaFrameStore, WanError> {
-        let mut meta_frames = Vec::new();
         let mut meta_frame_groups = Vec::new();
         let mut last_pointer = None;
 
@@ -48,26 +46,19 @@ impl MetaFrameStore {
             file.seek(SeekFrom::Start(
                 meta_frame_reference[meta_frame_id as usize],
             ))?;
-            meta_frame_groups.push(MetaFrameGroup::new_from_bytes(file, &mut meta_frames)?);
+            meta_frame_groups.push(MetaFrameGroup::new_from_bytes(file)?);
         }
-        Ok(MetaFrameStore {
-            meta_frames,
-            meta_frame_groups,
-        })
+        Ok(MetaFrameStore { meta_frame_groups })
     }
 
-    pub fn write<F: Write + Seek>(
-        file: &mut F,
-        meta_frame_store: &MetaFrameStore,
-    ) -> anyhow::Result<Vec<u32>> {
-        let nb_meta_frame = meta_frame_store.meta_frame_groups.len();
+    pub fn write<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<Vec<u32>> {
         let mut meta_frame_references = vec![];
 
-        for l in 0..nb_meta_frame {
+        for meta_frame_group in &self.meta_frame_groups {
             meta_frame_references.push(file.seek(SeekFrom::Current(0))? as u32);
-            meta_frame_store.meta_frame_groups[l]
-                .write(file, &meta_frame_store.meta_frames)
-                .with_context(move || format!("can't write the meta frame group with id {}", l))?;
+            meta_frame_group.write(file).with_context(move || {
+                format!("can't write the meta frame group {:?}", meta_frame_group)
+            })?;
         }
 
         Ok(meta_frame_references)
