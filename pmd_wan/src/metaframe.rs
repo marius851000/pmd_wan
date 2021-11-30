@@ -13,7 +13,9 @@ pub struct MetaFrame {
     /// Seems to be related to allocation. Each MetaFrame in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
     /// This can't be generalised to every sprites
     pub unk2: u16,
+    /// most of the time is equal to offset_y < 0
     pub unk3: bool,
+    /// most of the time is equal to offset_y >= 0
     pub unk4: bool,
     pub unk5: bool, // maybe is "invert palette color"
     pub image_index: usize,
