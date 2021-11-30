@@ -197,7 +197,7 @@ impl ImageBytes {
     pub fn get_image(
         &self,
         palette: &Palette,
-        resolution: &Resolution<u8>,
+        resolution: &Resolution,
         palette_id: u16,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
         if resolution.x == 0 || resolution.y == 0 {
@@ -242,7 +242,7 @@ pub enum DecodeImageError {
 /// Take the raw encoded image (from an [`ImageBytes`]), and decode them into a list of pixels
 pub fn decode_image_pixel(
     pixels: &[u8],
-    resolution: &Resolution<u8>,
+    resolution: &Resolution,
 ) -> Result<Vec<u8>, DecodeImageError> {
     if resolution.x % 8 != 0 {
         return Err(DecodeImageError::XResolutionNotMultipleEight(resolution.x));
@@ -260,8 +260,8 @@ pub fn decode_image_pixel(
     'main: for chunk in pixels.chunks_exact(64) {
         let mut pixel_for_chunk = chunk.iter();
         for line in 0..8 {
-            let line_start_offset =
-                (chunk_y as usize * 8 + line as usize) * resolution.x as usize + chunk_x as usize * 8;
+            let line_start_offset = (chunk_y as usize * 8 + line as usize) * resolution.x as usize
+                + chunk_x as usize * 8;
             for row_pair in 0..4 {
                 //no panic : 64 elements are guaranted, and this is looped 8*4=32 times
                 match dest.get_mut(line_start_offset + row_pair * 2 + 1) {
@@ -269,7 +269,7 @@ pub fn decode_image_pixel(
                     None => break 'main,
                 }
                 dest[line_start_offset + row_pair * 2] = *pixel_for_chunk.next().unwrap();
-            };
+            }
         }
         chunk_x += 1;
         if chunk_x > max_chunk_x {

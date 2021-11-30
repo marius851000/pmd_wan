@@ -22,7 +22,7 @@ pub struct MetaFrame {
     pub h_flip: bool,
     pub is_mosaic: bool,
     pub pal_idx: u16,
-    pub resolution: Resolution<u8>,
+    pub resolution: Resolution,
 }
 
 impl MetaFrame {

@@ -1,11 +1,11 @@
 /// Size of an [`Image`] (computed from [`MetaFrame`])
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Resolution<T> {
-    pub x: T,
-    pub y: T,
+pub struct Resolution {
+    pub x: u8,
+    pub y: u8,
 }
 
-impl Resolution<u8> {
+impl Resolution {
     pub fn from_indice(indice_x: u8, indice_y: u8) -> Option<Self> {
         match (indice_x, indice_y) {
             (0, 0) => Some(Self { x: 8, y: 8 }),
@@ -23,9 +23,7 @@ impl Resolution<u8> {
             _ => None,
         }
     }
-}
 
-impl Resolution<u8> {
     /// Return the indices for the given image resolution.
     /// The first one is the X indices, and the second one, the Y indices
     pub fn get_indice(self) -> Option<(u8, u8)> {
