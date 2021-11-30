@@ -10,14 +10,14 @@ use std::io::{Read, Write};
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrame {
     pub unk1: u16,
+    /// Seems to be related to allocation. Each MetaFrame should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting from 0
     pub unk2: u16,
     pub unk3: bool,
     pub unk4: bool,
-    pub unk5: bool,
+    pub unk5: bool, // maybe is "invert palette color"
     pub image_index: usize,
     pub offset_y: i8,
     pub offset_x: i16,
-    pub is_last: bool,
     pub v_flip: bool,
     pub h_flip: bool,
     pub is_mosaic: bool,
@@ -26,10 +26,12 @@ pub struct MetaFrame {
 }
 
 impl MetaFrame {
+    /// parse a metaframe from the file.
+    /// The second value is whether the "is_last" bit has been set to true, meaning it's the last MetaFrame from the MetaFrameGroup
     pub fn new_from_bytes<F: Read>(
         file: &mut F,
         previous_image: Option<usize>,
-    ) -> Result<MetaFrame, WanError> {
+    ) -> Result<(MetaFrame, bool), WanError> {
         trace!("parsing a meta-frame");
         let image_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
@@ -68,40 +70,39 @@ impl MetaFrame {
         let unk2 = file.read_u16::<LE>()?;
         let pal_idx = ((0xF000 & unk2) >> 12) as u16;
 
-        Ok(MetaFrame {
-            unk1,
-            unk2,
-            unk3,
-            unk4,
-            unk5,
-            image_index,
-            offset_x,
-            offset_y,
-            is_last,
-            v_flip,
-            h_flip,
-            is_mosaic,
-            pal_idx,
-            resolution: match Resolution::from_indice(size_indice_x, size_indice_y) {
-                Some(r) => r,
-                None => {
-                    return Err(WanError::InvalidResolutionIndice(
-                        size_indice_x,
-                        size_indice_y,
-                    ))
-                }
+        Ok((
+            MetaFrame {
+                unk1,
+                unk2,
+                unk3,
+                unk4,
+                unk5,
+                image_index,
+                offset_x,
+                offset_y,
+                v_flip,
+                h_flip,
+                is_mosaic,
+                pal_idx,
+                resolution: match Resolution::from_indice(size_indice_x, size_indice_y) {
+                    Some(r) => r,
+                    None => {
+                        return Err(WanError::InvalidResolutionIndice(
+                            size_indice_x,
+                            size_indice_y,
+                        ))
+                    }
+                },
             },
-        })
-    }
-
-    pub fn is_last(&self) -> bool {
-        self.is_last
+            is_last,
+        ))
     }
 
     pub fn write<F: Write>(
         &self,
         file: &mut F,
         previous_image: Option<usize>,
+        is_last: bool,
     ) -> anyhow::Result<()> {
         let image_index: i16 = match previous_image {
             None => self.image_index as i16,
@@ -132,16 +133,22 @@ impl MetaFrame {
 
         let written_offset_x = self.offset_x + 256;
         if written_offset_x >= 0x200 {
-            bail!("The x coordinate of this metaframe is more than 255 (it is {})", self.offset_x);
+            bail!(
+                "The x coordinate of this metaframe is more than 255 (it is {})",
+                self.offset_x
+            );
         }
         if written_offset_x < 0 {
-            bail!("The x coordinate of this metaframe is less than 256 (it is {})", self.offset_x);
+            bail!(
+                "The x coordinate of this metaframe is less than 256 (it is {})",
+                self.offset_x
+            );
         }
 
         let offset_x_data: u16 = ((size_indice_x as u16) << (8 + 6))
             + ((self.v_flip as u16) << (8 + 5))
             + ((self.h_flip as u16) << (8 + 4))
-            + ((self.is_last as u16) << (8 + 3))
+            + ((is_last as u16) << (8 + 3))
             + ((self.unk5 as u16) << (8 + 2))
             + (((written_offset_x) as u16) & 0x01FF);
 

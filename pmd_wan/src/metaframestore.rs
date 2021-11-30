@@ -65,12 +65,9 @@ impl MetaFrameStore {
 
         for l in 0..nb_meta_frame {
             meta_frame_references.push(file.seek(SeekFrom::Current(0))? as u32);
-            MetaFrameGroup::write(
-                file,
-                &meta_frame_store.meta_frame_groups[l],
-                &meta_frame_store.meta_frames,
-            )
-            .with_context(move || format!("can't write the meta frame group with id {}", l))?;
+            meta_frame_store.meta_frame_groups[l]
+                .write(file, &meta_frame_store.meta_frames)
+                .with_context(move || format!("can't write the meta frame group with id {}", l))?;
         }
 
         Ok(meta_frame_references)

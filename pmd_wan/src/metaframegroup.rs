@@ -6,6 +6,7 @@ use std::io::{Read, Write};
 /// A single frame of animation
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrameGroup {
+    //TODO: should put MetaFrame here too !
     pub meta_frames_id: Vec<usize>,
 }
 
@@ -18,28 +19,24 @@ impl MetaFrameGroup {
         let mut previous_image = None;
         loop {
             meta_frames_id.push(meta_frames.len()); // We refer to the metaframe we will put here
-            let meta_frame = MetaFrame::new_from_bytes(file, previous_image)?;
+            let (meta_frame, is_last) = MetaFrame::new_from_bytes(file, previous_image)?;
             previous_image = Some(meta_frame.image_index);
             meta_frames.push(meta_frame);
             trace!("it's data: {:?}", meta_frames[meta_frames.len() - 1]);
-            if meta_frames[meta_frames.len() - 1].is_last() {
+            if is_last {
                 break;
             }
         }
         Ok(MetaFrameGroup { meta_frames_id })
     }
 
-    pub fn write<F: Write>(
-        file: &mut F,
-        meta_frame_group: &MetaFrameGroup,
-        meta_frames: &[MetaFrame],
-    ) -> anyhow::Result<()> {
+    pub fn write<F: Write>(&self, file: &mut F, meta_frames: &[MetaFrame]) -> anyhow::Result<()> {
         let mut previous_image: Option<usize> = None;
-        for l in 0..meta_frame_group.meta_frames_id.len() {
-            let meta_frames_id = meta_frame_group.meta_frames_id[l];
+        for l in 0..self.meta_frames_id.len() {
+            let meta_frames_id = self.meta_frames_id[l];
             let meta_frame_to_write = &meta_frames[meta_frames_id];
             meta_frame_to_write
-                .write(file, previous_image)
+                .write(file, previous_image, l + 1 == self.meta_frames_id.len())
                 .with_context(move || format!("Can't write the meta_frame {}", l))?;
             previous_image = Some(meta_frame_to_write.image_index);
         }
