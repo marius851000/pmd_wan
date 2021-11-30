@@ -1,3 +1,4 @@
+use anyhow::{Context, bail};
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use image::{ImageBuffer, Rgba};
@@ -278,4 +279,40 @@ pub fn decode_image_pixel(
         };
     }
     Ok(dest)
+}
+
+pub fn encode_image_pixel(pixels: &[u8], resolution: &Resolution) -> anyhow::Result<Vec<u8>> {
+    if resolution.x % 8 != 0 || resolution.y % 8 != 0 {
+        bail!("The image resolution ({:?}) isn't a multiple of 8", resolution);
+    }
+    if resolution.x == 0 || resolution.y == 0 {
+        bail!("The image with the resolution {:?} have no pixel", resolution)
+    }
+    // will iterate over each line, placing them at the correct place in the output buffer
+    let mut output_buffer = vec![0; resolution.x as usize * resolution.y as usize];
+    let mut pixel_chunk_line_iter = pixels.chunks_exact(8);
+    for chunk_column in 0..(resolution.y / 8) {
+        for sub_chunk_line in 0..8 {
+            for chunk_row in 0..(resolution.x / 8) {
+                let chunk_row_data = pixel_chunk_line_iter.next().context("The input buffer is too small")?;
+                let number_chunk_ahead: usize =
+                    chunk_column as usize * (resolution.x / 8) as usize + chunk_row as usize;
+                let pos_total = number_chunk_ahead * 64 + sub_chunk_line * 8;
+                if output_buffer.len() < pos_total + 8 {
+                    bail!("The input buffer is too small")
+                };
+                //no panic : chunk_row_data is always of length 8
+                output_buffer[pos_total] = chunk_row_data[1];
+                output_buffer[pos_total + 1] = chunk_row_data[0];
+                output_buffer[pos_total + 2] = chunk_row_data[3];
+                output_buffer[pos_total + 3] = chunk_row_data[2];
+                output_buffer[pos_total + 4] = chunk_row_data[5];
+                output_buffer[pos_total + 5] = chunk_row_data[4];
+                output_buffer[pos_total + 6] = chunk_row_data[7];
+                output_buffer[pos_total + 7] = chunk_row_data[6];
+            }
+        }
+    }
+
+    Ok(output_buffer)
 }
