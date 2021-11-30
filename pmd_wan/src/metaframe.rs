@@ -10,7 +10,8 @@ use std::io::{Read, Write};
 #[derive(Debug, PartialEq, Eq)]
 pub struct MetaFrame {
     pub unk1: u16,
-    /// Seems to be related to allocation. Each MetaFrame should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting from 0
+    /// Seems to be related to allocation. Each MetaFrame in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
+    /// This can't be generalised to every sprites
     pub unk2: u16,
     pub unk3: bool,
     pub unk4: bool,

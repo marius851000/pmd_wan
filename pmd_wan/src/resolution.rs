@@ -43,4 +43,32 @@ impl Resolution {
             _ => return None,
         })
     }
+
+    pub fn chunk_to_allocate_for_metaframe(&self) -> u16 {
+        // extrapolated from the game. Might be invalid.
+        (self.x.saturating_sub(1) / 16 + 1) as u16 * (self.y.saturating_sub(1) / 16 + 1) as u16
+    }
+}
+
+//TODO: check by decoding every images too
+#[cfg(test)]
+mod tests {
+    use crate::Resolution;
+    #[test]
+    fn test_resolution_chunk_allocation() {
+        for ((input_x, input_y), expected_output) in &[((32, 32), 4), ((32, 8), 2), ((64, 64), 16)]
+        {
+            let resolution = Resolution {
+                x: *input_x,
+                y: *input_y,
+            };
+            let got = resolution.chunk_to_allocate_for_metaframe();
+            if got != *expected_output {
+                panic!(
+                    "The resolution {:?} return the allocation number {}, but {} were expected",
+                    resolution, got, expected_output
+                );
+            }
+        }
+    }
 }
