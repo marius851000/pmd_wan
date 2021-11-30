@@ -130,12 +130,20 @@ impl MetaFrame {
             + ((self.unk3 as u16) << 8)
             + ((self.offset_y as u16) & 0x00FF);
 
+        let written_offset_x = self.offset_x + 256;
+        if written_offset_x >= 0x200 {
+            bail!("The x coordinate of this metaframe is more than 255 (it is {})", self.offset_x);
+        }
+        if written_offset_x < 0 {
+            bail!("The x coordinate of this metaframe is less than 256 (it is {})", self.offset_x);
+        }
+
         let offset_x_data: u16 = ((size_indice_x as u16) << (8 + 6))
             + ((self.v_flip as u16) << (8 + 5))
             + ((self.h_flip as u16) << (8 + 4))
             + ((self.is_last as u16) << (8 + 3))
             + ((self.unk5 as u16) << (8 + 2))
-            + (((self.offset_x + 256) as u16) & 0x01FF);
+            + (((written_offset_x) as u16) & 0x01FF);
 
         (offset_y_data, offset_x_data, self.unk2).write(file)?;
 
