@@ -113,7 +113,7 @@ struct MetaFramePos {
 const MAX_CHUNK_SIZE: u16 = 64;
 const MIN_CHUNK_SIZE: u16 = 8;
 
-pub fn insert_image_in_wanimage(
+pub fn insert_frame_in_wanimage(
     image: Vec<u8>,
     width: u16,
     height: u16,
