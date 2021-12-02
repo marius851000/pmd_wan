@@ -240,6 +240,8 @@ fn insert_meta_frame_post_in_wan_image(
         image_size_counter += meta_frame_pos.size.chunk_to_allocate_for_metaframe();
     }
 
+    wanimage.unk_1 = wanimage.unk_1.max(image_size_counter.into());
+
     Ok(meta_frames)
 }
 

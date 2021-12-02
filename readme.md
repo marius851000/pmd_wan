@@ -10,3 +10,5 @@ reading : production ready. Should never panic, and has been fuzzed
 status of writing sprites : ugly, may work but may panic or produce incorrect result
 - monster.bin and m_ground.bin should be both readable and writable
 - probably all ground sprite should be too
+
+creating an all new static sprite : Should work with no issue.
