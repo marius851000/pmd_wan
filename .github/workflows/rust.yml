@@ -4,21 +4,7 @@ name: Continuous integration
 
 jobs:
   check:
-    name: Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-
-  test:
-    name: Test Suite
+    name: Check and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -30,7 +16,9 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
-
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
