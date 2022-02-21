@@ -2,3 +2,4 @@
 /Cargo.lock
 /fuzz/coverage
 /src/main.rs
+/test

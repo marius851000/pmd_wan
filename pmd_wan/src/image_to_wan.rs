@@ -1,5 +1,5 @@
 use crate::{encode_image_pixel, ImageBytes, MetaFrame, MetaFrameGroup, Resolution, WanImage};
-use anyhow::{Context, bail};
+use anyhow::{bail, Context};
 use std::convert::TryInto;
 
 #[derive(Debug)]
@@ -124,12 +124,15 @@ pub fn insert_frame_in_wanimage(
         bail!("The height of the image is {}, while only image with a height inferior to 256 can be used", height);
     }
     if width >= 512 {
-        bail!("The width of the image is {}, while only image with a width less than 512 can be used", width);
+        bail!(
+            "The width of the image is {}, while only image with a width less than 512 can be used",
+            width
+        );
     }
     let position_x = -(width as i32) / 2;
     let mut position_y = -(height as i32) / 2;
     let mut image_buffer = ImageBuffer::new_from_vec(image, width, height).unwrap();
-    
+
     // find top corner of the image
     position_y += image_buffer.cut_top() as i32;
 
@@ -200,7 +203,7 @@ fn insert_meta_frame_post_in_wan_image(
 ) -> anyhow::Result<Vec<MetaFrame>> {
     let mut meta_frames = Vec::new();
     let mut image_size_counter = 0;
-    
+
     for meta_frame_pos in list_meta_frame_pos {
         let mut pixels = Vec::new();
         for in_y in 0..meta_frame_pos.size.y as u16 {
@@ -240,7 +243,7 @@ fn insert_meta_frame_post_in_wan_image(
         image_size_counter += meta_frame_pos.size.chunk_to_allocate_for_metaframe();
     }
 
-    wanimage.unk_1 = wanimage.unk_1.max(image_size_counter.into());
+    wanimage.unk_1 = wanimage.unk_1.max(image_size_counter as u32);
 
     Ok(meta_frames)
 }

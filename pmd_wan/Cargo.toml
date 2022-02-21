@@ -12,7 +12,7 @@ license = "CC0-1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = "0.23.14"
+image = {version="0.24.0", features=[]}
 log = "0.4.14"
 thiserror = "1.0.28"
 byteorder = "1.4.2"

@@ -62,6 +62,7 @@ impl MetaFrame {
         let unk4 = get_bit_u16(offset_y_data, 6).unwrap();
         let offset_y = (offset_y_data & 0x00FF) as i8; //range: 0-255 (integer)
 
+        #[allow(clippy::collapsible_else_if)]
         let unk3_4 = if offset_y < 0 {
             if unk3 && !unk4 {
                 None

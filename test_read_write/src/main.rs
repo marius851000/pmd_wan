@@ -105,12 +105,8 @@ fn main() {
             };
             let mut cursor = Cursor::new(sub_file_vec);
             let shouldnt_be_byte_perfect = if monster_file_name == "monster.bin" {
-                match sub_file_id {
-                    //they have a lot of 0 after the file... Take a look at the px decompressor, it may come from there
-                    433 => true,
-                    438 => true,
-                    _ => false,
-                }
+                //they have a lot of 0 after the file... Take a look at the px decompressor, it may come from there
+                matches!(sub_file_id, 433 | 438)  
             } else {
                 false
             };
