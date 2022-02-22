@@ -50,7 +50,7 @@ impl ImageBuffer {
     }
 
     pub fn cut_top(&mut self) -> usize {
-        let mut number_of_row_to_cut = 0;
+        let mut number_of_row_to_cut: u16 = 0;
         for row in self.buffer.chunks_exact(self.width as usize) {
             let mut have_element = false;
             for pixel in row {
@@ -66,7 +66,9 @@ impl ImageBuffer {
             [number_of_row_to_cut as usize * self.width as usize..self.buffer.len()]
             .to_vec();
         self.buffer = buffer.clone();
-        number_of_row_to_cut
+        self.height -= number_of_row_to_cut;
+        number_of_row_to_cut.into()
+    }
     }
 
     pub fn get_chunk_buffer(&self, chunk_size: u16) -> Option<ImageBuffer> {
