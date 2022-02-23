@@ -69,7 +69,6 @@ impl ImageBuffer {
         self.height -= number_of_row_to_cut;
         number_of_row_to_cut.into()
     }
-    }
 
     pub fn get_chunk_buffer(&self, chunk_size: u16) -> Option<ImageBuffer> {
         if chunk_size == 0 {
