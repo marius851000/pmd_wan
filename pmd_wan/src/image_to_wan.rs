@@ -323,7 +323,9 @@ fn insert_meta_frame_post_in_wan_image(
         image_size_counter += meta_frame_pos.size.chunk_to_allocate_for_metaframe();
     }
 
-    wanimage.unk_1 = wanimage.unk_1.max(image_size_counter as u32);
+    wanimage.size_to_allocate_for_all_metaframe = wanimage
+        .size_to_allocate_for_all_metaframe
+        .max(image_size_counter as u32);
 
     Ok(meta_frames)
 }
