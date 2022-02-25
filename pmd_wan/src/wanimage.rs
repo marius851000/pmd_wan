@@ -23,6 +23,21 @@ pub struct WanImage {
 }
 
 impl WanImage {
+    /// Create an empty 16 color sprite for the given [`SpriteType`]
+    pub fn new(sprite_type: SpriteType) -> Self {
+        Self {
+            image_store: ImageStore::default(),
+            meta_frame_store: MetaFrameStore::default(),
+            anim_store: AnimStore::default(),
+            palette: Palette::default(),
+            raw_particule_table: Vec::new(),
+            is_256_color: false,
+            sprite_type,
+            size_to_allocate_for_all_metaframe: 0,
+            unk2: 0,
+        }
+    }
+
     /// parse an image in the wan/wat format stored in the input file
     /// It assume that the file is decompressed
     pub fn decode_wan<F: Read + Seek>(mut file: F) -> Result<WanImage, WanError> {
