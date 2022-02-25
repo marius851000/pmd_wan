@@ -46,7 +46,7 @@ mod imagecompression;
 pub use imagecompression::*;
 
 mod image_to_wan;
-pub use image_to_wan::insert_frame_in_wanimage;
+pub use image_to_wan::insert_meta_frame_in_wanimage;
 
 fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
     if id < 16 {
