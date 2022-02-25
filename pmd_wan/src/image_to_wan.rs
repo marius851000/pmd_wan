@@ -2,7 +2,8 @@ use crate::{encode_image_pixel, ImageBytes, MetaFrame, MetaFrameGroup, Resolutio
 use anyhow::{bail, Context};
 use std::convert::TryInto;
 
-#[derive(Debug)]
+/// Images with no pixel are valid, but it is guarantted that width*height == buffer.len()
+#[derive(Debug, PartialEq, Eq)]
 struct ImageBuffer {
     buffer: Vec<u8>,
     width: u16,
@@ -12,9 +13,6 @@ struct ImageBuffer {
 impl ImageBuffer {
     pub fn new_from_vec(buffer: Vec<u8>, width: u16, height: u16) -> Option<ImageBuffer> {
         if width as usize * height as usize != buffer.len() {
-            return None;
-        }
-        if width == 0 || height == 0 {
             return None;
         }
         Some(Self {
@@ -30,6 +28,14 @@ impl ImageBuffer {
 
     pub fn height(&self) -> u16 {
         self.height
+    }
+
+    pub fn buffer(&self) -> &Vec<u8> {
+        &self.buffer
+    }
+
+    pub fn have_pixel(&self) -> bool {
+        self.width != 0 || self.height != 0
     }
 
     pub fn get_pixel(&self, x: u16, y: u16) -> Option<u8> {
@@ -50,7 +56,10 @@ impl ImageBuffer {
     }
 
     pub fn cut_top(&mut self) -> usize {
-        let mut number_of_row_to_cut: u16 = 0;
+        if !self.have_pixel() {
+            return 0;
+        }
+        let mut number_of_line_to_cut: u16 = 0;
         for row in self.buffer.chunks_exact(self.width as usize) {
             let mut have_element = false;
             for pixel in row {
@@ -59,21 +68,89 @@ impl ImageBuffer {
             if have_element {
                 break;
             } else {
-                number_of_row_to_cut += 1;
+                number_of_line_to_cut += 1;
             }
         }
         let buffer = &self.buffer
-            [number_of_row_to_cut as usize * self.width as usize..self.buffer.len()]
+            [number_of_line_to_cut as usize * self.width as usize..self.buffer.len()]
             .to_vec();
         self.buffer = buffer.clone();
-        self.height -= number_of_row_to_cut;
-        number_of_row_to_cut.into()
+        self.height -= number_of_line_to_cut;
+        number_of_line_to_cut.into()
+    }
+
+    pub fn cut_bottom(&mut self) -> usize {
+        if !self.have_pixel() {
+            return 0;
+        }
+        let mut number_of_cut_line = 0;
+        'main: for line_nb in (0..self.height).rev() {
+            for pixel_nb in (line_nb * self.width)..((line_nb + 1) * self.width) {
+                //no panic: pixel_nb should always be in the appropriate range
+                if self.buffer[pixel_nb as usize] != 0 {
+                    break 'main;
+                };
+            }
+            number_of_cut_line += 1;
+            self.height -= 1;
+            self.buffer
+                .truncate(self.height as usize * self.width as usize);
+        }
+        number_of_cut_line
+    }
+
+    pub fn cut_left(&mut self) -> usize {
+        if !self.have_pixel() {
+            return 0;
+        }
+        let mut number_of_cut_row = 0;
+        'main: for _row in (0..self.width).rev() {
+            for line in 0..(self.height as usize) {
+                let pixel_id = self.width as usize * line + self.width as usize - 1;
+                if self.buffer[pixel_id] != 0 {
+                    break 'main;
+                };
+            }
+            for line in (0..(self.height as usize)).rev() {
+                let pixel_to_remove = self.width as usize * line + self.width as usize - 1;
+                self.buffer.remove(pixel_to_remove);
+            }
+            self.width -= 1;
+            number_of_cut_row += 1;
+        }
+        number_of_cut_row
+    }
+
+    pub fn cut_right(&mut self) -> usize {
+        if !self.have_pixel() {
+            return 0;
+        }
+        let mut number_of_cut_row = 0;
+        'main: for _row in (0..self.width).rev() {
+            for line in 0..(self.height as usize) {
+                let pixel_id = self.width as usize * line;
+                println!("pixel_id : {}", pixel_id);
+                if self.buffer[pixel_id] != 0 {
+                    break 'main;
+                };
+            }
+            for line in (0..self.height).rev() {
+                let pixel_to_remove = self.width as usize * line as usize;
+                self.buffer.remove(pixel_to_remove);
+            }
+            self.width -= 1;
+            number_of_cut_row += 1;
+        }
+        number_of_cut_row
     }
 
     pub fn get_chunk_buffer(&self, chunk_size: u16) -> Option<ImageBuffer> {
         if chunk_size == 0 {
             return None;
         };
+        if !self.have_pixel() {
+            return None;
+        }
         let width_nb_ch = (self.width as usize + chunk_size as usize - 1) / chunk_size as usize;
         let height_nb_ch = (self.height as usize + chunk_size as usize - 1) / chunk_size as usize;
         let mut chunk_buffer = Self::new_from_vec(
@@ -137,7 +214,9 @@ pub fn insert_frame_in_wanimage(
     // find top corner of the image
     position_y += image_buffer.cut_top() as i32;
 
-    //TODO: do the same with the left side
+    if !image_buffer.have_pixel() {
+        return Ok(None);
+    }
 
     let list_meta_frame_pos = get_optimal_meta_frames_pos(&image_buffer)?;
 
@@ -257,3 +336,68 @@ fn quick_imagebuffer_test() {
     assert_eq!(sub_buffer.height, 2);
     assert_eq!(sub_buffer.buffer, vec![1, 1, 1, 1]);
 }
+
+#[test]
+fn imagebuffer_cut_test() {
+    // (image_buffer, x_src, y_src, target_buffer, x_target, y_target, cut_top, cut_bottom, cut_right, cut_left)
+    #[rustfmt::skip]
+    let tests_to_perform: [(Vec<u8>, u16, u16, Vec<u8>, u16, u16, usize, usize, usize, usize); 2] = [
+        (
+            vec![
+                0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0,
+                0, 0, 1, 1, 1, 0,
+                0, 0, 0, 0, 1, 0,
+                0, 0, 0, 0, 0, 0
+            ], 6, 5,
+            vec![
+                1, 1, 1,
+                0, 0, 1
+            ], 3, 2,
+            2, 1, 2, 1
+        ),
+        (
+            vec![
+                1, 1, 1,
+                1, 1, 1,
+                1, 1, 1
+            ], 3, 3,
+            vec![
+                1, 1, 1,
+                1, 1, 1,
+                1, 1, 1
+            ], 3, 3,
+            0, 0, 0, 0
+        )
+    ];
+    for (
+        buffer_src,
+        x_src,
+        y_src,
+        buffer_target,
+        x_target,
+        y_target,
+        cut_top_px,
+        cut_bottom_px,
+        cut_right_px,
+        cut_left_px,
+    ) in tests_to_perform
+    {
+        let mut image_src = ImageBuffer::new_from_vec(buffer_src, x_src, y_src).unwrap();
+        let image_target = ImageBuffer::new_from_vec(buffer_target, x_target, y_target).unwrap();
+        assert_eq!(cut_top_px, image_src.cut_top());
+        assert_eq!(cut_bottom_px, image_src.cut_bottom());
+        assert_eq!(cut_left_px, image_src.cut_left());
+        assert_eq!(cut_right_px, image_src.cut_right());
+        assert_eq!(image_src, image_target);
+    }
+
+    //test with all 0 pixels
+    let mut image_src = ImageBuffer::new_from_vec(vec![0; 4], 2, 2).unwrap();
+    image_src.cut_top();
+    image_src.cut_bottom();
+    image_src.cut_left();
+    image_src.cut_right();
+    assert_eq!(image_src, ImageBuffer::new_from_vec(vec![], 0, 0).unwrap());
+}
+
