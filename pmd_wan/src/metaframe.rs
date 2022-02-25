@@ -12,7 +12,7 @@ pub struct MetaFrame {
     pub unk1: u16,
     /// Seems to be related to allocation. Each MetaFrame in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
     /// This can't be generalised to every sprites
-    pub unk2: u16,
+    pub image_alloc_counter: u16,
     /// Two value with unknown property in the offset y data.
     /// most of the time, the unk3 is equal to offset_y < 0, and unk4 the inverse (will be automatically computed if set to None)
     /// otherwise the two boolean in the tuple will be used
@@ -91,7 +91,7 @@ impl MetaFrame {
         Ok((
             MetaFrame {
                 unk1,
-                unk2,
+                image_alloc_counter: unk2,
                 unk3_4,
                 unk5,
                 image_index,
@@ -177,7 +177,7 @@ impl MetaFrame {
             + ((self.unk5 as u16) << (8 + 2))
             + (((written_offset_x) as u16) & 0x01FF);
 
-        (offset_y_data, offset_x_data, self.unk2).write(file)?;
+        (offset_y_data, offset_x_data, self.image_alloc_counter).write(file)?;
 
         Ok(())
     }
