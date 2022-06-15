@@ -104,7 +104,7 @@ impl ImageBytes {
             image_size
         );
 
-        let mut mixed_pixels = Vec::new();
+        let mut mixed_pixels = Vec::with_capacity(64*64);
 
         let mut z_index = None;
 
@@ -121,7 +121,7 @@ impl ImageBytes {
                         actual_byte = file.read_u8()?;
                         actual_byte >> 4
                     } else {
-                        (actual_byte << 4) >> 4
+                        actual_byte & 0x0F
                     };
                     mixed_pixels.push(color_id);
                 }
