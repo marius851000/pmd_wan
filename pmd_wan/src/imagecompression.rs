@@ -24,8 +24,8 @@ impl CompressionMethod {
         match self {
             Self::CompressionMethodOriginal => {
                 enum ActualEntry {
-                    Null(u64, u32),      //lenght (pixel), z_index
-                    Some(u64, u64, u32), // initial_offset, lenght (pixel), z_index
+                    Null(u32, u32),      //lenght (pixel), z_index
+                    Some(u64, u32, u32), // initial_offset, lenght (pixel), z_index
                 }
 
                 impl ActualEntry {
@@ -42,21 +42,21 @@ impl CompressionMethod {
                             ActualEntry::Null(lenght, z_index) => ImageAssemblyEntry {
                                 pixel_src: 0,
                                 pixel_amount: *lenght,
-                                byte_amount: *lenght / 2,
+                                byte_amount: (*lenght / 2) as u16, //NOTE: lenght is always <= than 64x64
                                 _z_index: *z_index,
                             },
                             ActualEntry::Some(initial_offset, lenght, z_index) => {
                                 ImageAssemblyEntry {
                                     pixel_src: *initial_offset,
                                     pixel_amount: *lenght,
-                                    byte_amount: *lenght / 2,
+                                    byte_amount: (*lenght / 2) as u16,
                                     _z_index: *z_index,
                                 }
                             }
                         }
                     }
 
-                    fn advance(&self, lenght: u64) -> ActualEntry {
+                    fn advance(&self, lenght: u32) -> ActualEntry {
                         match self {
                             ActualEntry::Null(l, z) => ActualEntry::Null(*l + lenght, *z),
                             ActualEntry::Some(offset, l, z) => {
@@ -114,7 +114,7 @@ impl CompressionMethod {
                 multiple_of_value,
                 min_transparent_to_compress,
             } => {
-                let mut number_of_byte_to_include = 0;
+                let mut number_of_byte_to_include: u16 = 0;
                 let mut byte_include_start = file.seek(SeekFrom::Current(0))?;
 
                 let mut pixel_id = 0;
@@ -142,7 +142,7 @@ impl CompressionMethod {
                         if number_of_byte_to_include > 0 {
                             assembly_table.push(ImageAssemblyEntry {
                                 pixel_src: byte_include_start,
-                                pixel_amount: number_of_byte_to_include * 2,
+                                pixel_amount: number_of_byte_to_include as u32 * 2,
                                 byte_amount: number_of_byte_to_include,
                                 _z_index: image.z_index,
                             });
@@ -151,7 +151,7 @@ impl CompressionMethod {
                         };
                         //create new entry for transparent stuff
                         //count the number of transparent tile
-                        let mut transparent_tile_nb = 0;
+                        let mut transparent_tile_nb: u32 = 0; //TODO: somehow guarantee it never gets bigger than (16^2)*2
                         loop {
                             if pixel_id >= pixel_list.len() {
                                 break;
@@ -164,13 +164,13 @@ impl CompressionMethod {
                             };
                         }
                         if pixel_id % multiple_of_value != 0 {
-                            transparent_tile_nb -= pixel_id % multiple_of_value;
+                            transparent_tile_nb -= (pixel_id % multiple_of_value) as u32;
                             pixel_id -= pixel_id % multiple_of_value;
                         };
                         assembly_table.push(ImageAssemblyEntry {
                             pixel_src: 0,
-                            pixel_amount: transparent_tile_nb as u64,
-                            byte_amount: (transparent_tile_nb as u64) / 2, //TODO: take care of the tileset lenght
+                            pixel_amount: transparent_tile_nb,
+                            byte_amount: (transparent_tile_nb / 2) as u16, //TODO: take care of the tileset lenght
                             _z_index: image.z_index,
                         });
 
@@ -189,7 +189,7 @@ impl CompressionMethod {
                 if number_of_byte_to_include > 0 {
                     assembly_table.push(ImageAssemblyEntry {
                         pixel_src: byte_include_start,
-                        pixel_amount: number_of_byte_to_include * 2,
+                        pixel_amount: number_of_byte_to_include as u32 * 2,
                         byte_amount: number_of_byte_to_include,
                         _z_index: image.z_index,
                     });
@@ -205,7 +205,7 @@ impl CompressionMethod {
                 assembly_table.push(ImageAssemblyEntry {
                     pixel_src: start_offset,
                     pixel_amount: byte_len * 2,
-                    byte_amount: byte_len,
+                    byte_amount: byte_len as u16,
                     _z_index: image.z_index,
                 })
             }

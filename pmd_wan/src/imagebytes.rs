@@ -24,16 +24,16 @@ pub enum ImageBytesToImageError {
 #[derive(Debug)]
 pub struct ImageAssemblyEntry {
     pub pixel_src: u64,
-    pub pixel_amount: u64,
-    pub byte_amount: u64,
+    pub pixel_amount: u32,
+    pub byte_amount: u16,
     pub _z_index: u32,
 }
 
 impl ImageAssemblyEntry {
     fn new_from_bytes<F: Read>(file: &mut F) -> Result<ImageAssemblyEntry, WanError> {
         let pixel_src = file.read_u32::<LE>()? as u64;
-        let byte_amount = file.read_u16::<LE>()? as u64;
-        let pixel_amount = byte_amount * 2;
+        let byte_amount = file.read_u16::<LE>()?;
+        let pixel_amount = (byte_amount as u32) * 2;
         file.read_u16::<LE>()?;
         let z_index = file.read_u32::<LE>()?;
         Ok(ImageAssemblyEntry {
@@ -85,10 +85,10 @@ impl ImageBytes {
                 );
                 if asm_entry.pixel_src != 0 {
                     match last_pointer {
-                        None => last_pointer = Some(asm_entry.pixel_src + asm_entry.byte_amount),
+                        None => last_pointer = Some(asm_entry.pixel_src + asm_entry.byte_amount as u64),
                         Some(value) => {
                             if value == asm_entry.pixel_src {
-                                last_pointer = Some(asm_entry.byte_amount + value);
+                                last_pointer = Some(asm_entry.byte_amount as u64 + value);
                             } else {
                                 return Err(WanError::IncoherentPointerToImagePart);
                             }
@@ -110,20 +110,17 @@ impl ImageBytes {
 
         trace!("{:#?}", img_asm_table);
 
+        let mut read_buffer = Vec::with_capacity(64);
+
         for entry in &img_asm_table {
             if entry.pixel_src == 0 {
                 mixed_pixels.extend(&vec![0; entry.pixel_amount as usize]);
             } else {
                 file.seek(SeekFrom::Start(entry.pixel_src))?;
-                let mut actual_byte = 0;
-                for loop_id in 0..entry.pixel_amount {
-                    let color_id = if loop_id % 2 == 0 {
-                        actual_byte = file.read_u8()?;
-                        actual_byte >> 4
-                    } else {
-                        actual_byte & 0x0F
-                    };
-                    mixed_pixels.push(color_id);
+                read_buffer.resize(entry.byte_amount as usize, 0);
+                file.read(&mut read_buffer)?;
+                for pixel_pair in &read_buffer {
+                    mixed_pixels.extend(&[pixel_pair >> 4, pixel_pair & 0x0F]);
                 }
             };
             // check that all part of the image have the same z index
