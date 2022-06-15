@@ -20,3 +20,10 @@ binread = "2.2.0"
 binwrite = "0.2.1"
 pmd_sir0 = "1.2.2"
 anyhow = "1.0.48"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "parse"
+harness = false
