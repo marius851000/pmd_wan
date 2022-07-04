@@ -15,8 +15,8 @@ pub enum WanError {
     InvalidResolution,
     #[error("pointer to image parts are not coherent")]
     IncoherentPointerToImagePart,
-    #[error("impossible to find a definied z_index (the image is probably empty)")]
-    NoZIndex,
+    #[error("An ImageBytes buffer is empty")]
+    EmptyImageBytes,
     #[error("an invalid alpha level was found in the picture")]
     ImpossibleAlphaLevel,
     #[error("an image data pointer is null")]

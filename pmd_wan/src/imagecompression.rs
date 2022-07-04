@@ -4,6 +4,7 @@ use binwrite::BinWrite;
 
 use crate::{imagebytes::ImageAssemblyEntry, ImageBytes, WanError};
 
+#[derive(Clone)]
 pub enum CompressionMethod {
     CompressionMethodOriginal,
     CompressionMethodOptimised {
@@ -20,8 +21,19 @@ impl CompressionMethod {
         pixel_list: &[u8],
         file: &mut F,
     ) -> Result<Vec<ImageAssemblyEntry>, WanError> {
+        let compression = if pixel_list.len() % 64 != 0 {
+          CompressionMethod::NoCompression  
+        } else {
+            self.clone()
+        };
+
+        if pixel_list.is_empty() {
+            return Err(WanError::EmptyImageBytes)
+        }
+
         let mut assembly_table: Vec<ImageAssemblyEntry> = vec![];
-        match self {
+
+        match compression {
             Self::CompressionMethodOriginal => {
                 enum ActualEntry {
                     Null(u32, u32),      //lenght (pixel), z_index
@@ -93,19 +105,19 @@ impl CompressionMethod {
                         None => true,
                     };
 
-                    if need_to_create_new_entry {
+                    actual_entry = if need_to_create_new_entry {
                         if let Some(entry) = actual_entry {
                             assembly_table.push(entry.to_assembly())
                         }
 
-                        actual_entry = Some(ActualEntry::new(
+                        Some(ActualEntry::new(
                             is_all_black,
                             pos_before_area,
                             image.z_index,
-                        ));
+                        ))
                     } else {
                         // no panic : need_to_create_new_entry is false if actual_entry is none
-                        actual_entry = Some(actual_entry.unwrap().advance(64));
+                        Some(actual_entry.unwrap().advance(64))
                     }
                 }
                 assembly_table.push(actual_entry.unwrap().to_assembly())
@@ -126,7 +138,7 @@ impl CompressionMethod {
                         && (pixel_id + min_transparent_to_compress < pixel_list.len())
                     {
                         let mut encontered_non_transparent = false;
-                        for l in 0..*min_transparent_to_compress {
+                        for l in 0..min_transparent_to_compress {
                             if pixel_list[pixel_id + l] != 0 {
                                 encontered_non_transparent = true;
                                 break;

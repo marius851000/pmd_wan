@@ -132,10 +132,12 @@ impl ImageBytes {
             z_index = Some(entry._z_index);
         }
 
-        let z_index = match z_index {
-            Some(value) => value,
-            None => return Err(WanError::NoZIndex),
-        };
+        if mixed_pixels.is_empty() {
+            return Err(WanError::EmptyImageBytes)
+        }
+
+        //No panic : z_index is redefined whenever bytes is added to mixed_pixels, and it return earlier if that's the case
+        let z_index = z_index.unwrap();
 
         Ok(ImageBytes {
             mixed_pixels,
