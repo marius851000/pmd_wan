@@ -4,6 +4,7 @@ extern crate pmd_wan;
 use std::io::Cursor;
 use std::io::{Seek, SeekFrom};
 
+//TODO: create wan from png or something (and then decode)
 fuzz_target!(|data: &[u8]| {
     let input = Cursor::new(data);
     let decoded = pmd_wan::WanImage::decode_wan(input);

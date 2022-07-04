@@ -24,7 +24,13 @@ path = "../pmd_wan"
 members = ["."]
 
 [[bin]]
-name = "wanfile"
-path = "fuzz_targets/wanfile.rs"
+name = "wanfile_read_write"
+path = "fuzz_targets/wanfile_read_write.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "wanfile_decode"
+path = "fuzz_targets/wanfile_decode.rs"
 test = false
 doc = false
