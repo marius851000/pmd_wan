@@ -22,13 +22,13 @@ impl CompressionMethod {
         file: &mut F,
     ) -> Result<Vec<ImageAssemblyEntry>, WanError> {
         let compression = if pixel_list.len() % 64 != 0 {
-          CompressionMethod::NoCompression  
+            CompressionMethod::NoCompression
         } else {
             self.clone()
         };
 
         if pixel_list.is_empty() {
-            return Err(WanError::EmptyImageBytes)
+            return Err(WanError::EmptyImageBytes);
         }
 
         let mut assembly_table: Vec<ImageAssemblyEntry> = vec![];

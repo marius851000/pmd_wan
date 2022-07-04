@@ -193,6 +193,7 @@ pub fn insert_meta_frame_in_wanimage(
         None
     })
 }
+
 fn insert_meta_frame_pos_in_wan_image(
     wanimage: &mut WanImage,
     pal_id: u16,

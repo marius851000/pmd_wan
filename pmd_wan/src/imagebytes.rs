@@ -85,7 +85,9 @@ impl ImageBytes {
                 );
                 if asm_entry.pixel_src != 0 {
                     match last_pointer {
-                        None => last_pointer = Some(asm_entry.pixel_src + asm_entry.byte_amount as u64),
+                        None => {
+                            last_pointer = Some(asm_entry.pixel_src + asm_entry.byte_amount as u64)
+                        }
                         Some(value) => {
                             if value == asm_entry.pixel_src {
                                 last_pointer = Some(asm_entry.byte_amount as u64 + value);
@@ -104,7 +106,7 @@ impl ImageBytes {
             image_size
         );
 
-        let mut mixed_pixels = Vec::with_capacity(64*64);
+        let mut mixed_pixels = Vec::with_capacity(64 * 64);
 
         let mut z_index = None;
 
@@ -133,7 +135,7 @@ impl ImageBytes {
         }
 
         if mixed_pixels.is_empty() {
-            return Err(WanError::EmptyImageBytes)
+            return Err(WanError::EmptyImageBytes);
         }
 
         //No panic : z_index is redefined whenever bytes is added to mixed_pixels, and it return earlier if that's the case
