@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate log;
 
+#[cfg(test)]
+pub mod tests;
+
 pub mod wanimage;
 pub use wanimage::WanImage;
 
