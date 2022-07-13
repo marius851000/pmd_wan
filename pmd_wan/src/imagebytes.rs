@@ -67,6 +67,7 @@ pub struct ImageBytes {
 }
 
 impl ImageBytes {
+    #[allow(clippy::read_zero_byte_vec)] // seemingly false positive
     pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<ImageBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;
@@ -120,7 +121,7 @@ impl ImageBytes {
             } else {
                 file.seek(SeekFrom::Start(entry.pixel_src))?;
                 read_buffer.resize(entry.byte_amount as usize, 0);
-                file.read(&mut read_buffer)?;
+                file.read_exact(&mut read_buffer)?;
                 for pixel_pair in &read_buffer {
                     mixed_pixels.extend(&[pixel_pair >> 4, pixel_pair & 0x0F]);
                 }
