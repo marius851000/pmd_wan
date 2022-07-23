@@ -1,5 +1,5 @@
-use crate::{wan_read_raw_4, AnimStore, ImageBytesToImageError, MetaFrame};
-use crate::{ImageStore, MetaFrameStore, Palette, SpriteType, WanError};
+use crate::{wan_read_raw_4, AnimStore, Fragment, ImageBytesToImageError};
+use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
 use anyhow::Context;
 use binwrite::BinWrite;
@@ -11,7 +11,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 #[derive(PartialEq, Eq, Debug)]
 pub struct WanImage {
     pub image_store: ImageStore,
-    pub meta_frame_store: MetaFrameStore,
+    pub frames: FrameStore,
     pub anim_store: AnimStore,
     pub palette: Palette,
     pub raw_particule_table: Vec<u8>,
@@ -27,7 +27,7 @@ impl WanImage {
     pub fn new(sprite_type: SpriteType) -> Self {
         Self {
             image_store: ImageStore::default(),
-            meta_frame_store: MetaFrameStore::default(),
+            frames: FrameStore::default(),
             anim_store: AnimStore::default(),
             palette: Palette::default(),
             raw_particule_table: Vec::new(),
@@ -75,8 +75,8 @@ impl WanImage {
         // third step: decode animation info block
         trace!("reading the animation info block");
         file.seek(SeekFrom::Start(pointer_to_anim_info))?;
-        let pointer_meta_frame_reference_table = file.read_u32::<LE>()? as u64;
-        if pointer_meta_frame_reference_table > source_file_lenght {
+        let pointer_fragment_reference_table = file.read_u32::<LE>()? as u64;
+        if pointer_fragment_reference_table > source_file_lenght {
             return Err(WanError::PostFilePointer("meta frame reference table"));
         }
         let pointer_particule_offset_table = file.read_u32::<LE>()? as u64;
@@ -110,9 +110,9 @@ impl WanImage {
         file.seek(SeekFrom::Start(pointer_palette))?;
         let palette = Palette::new_from_bytes(&mut file)?;
 
-        // decode meta-frame
+        // decode fragments
         trace!("decoding meta-frame");
-        let meta_frame_reference_end_pointer: u64 = match pointer_particule_offset_table {
+        let fragment_reference_end_pointer: u64 = match pointer_particule_offset_table {
             0 => match WanImage::find_first_non_null_animation_seq_entry(
                 &mut file,
                 pointer_animation_groups_table,
@@ -124,19 +124,19 @@ impl WanImage {
             value => value,
         };
 
-        let amount_meta_frame_raw = meta_frame_reference_end_pointer
-            .checked_sub(pointer_meta_frame_reference_table)
+        let amount_fragments_raw = fragment_reference_end_pointer
+            .checked_sub(pointer_fragment_reference_table)
             .ok_or(WanError::OverflowSubstraction(
-                meta_frame_reference_end_pointer as u64,
-                pointer_meta_frame_reference_table as u64,
+                fragment_reference_end_pointer as u64,
+                pointer_fragment_reference_table as u64,
                 "meta frame reference end pointer",
                 "pointer meta frame reference table",
             ))?;
 
-        let amount_meta_frame = amount_meta_frame_raw / 4;
+        let amount_fragments = amount_fragments_raw / 4;
 
-        file.seek(SeekFrom::Start(pointer_meta_frame_reference_table))?;
-        let meta_frame_store = MetaFrameStore::new_from_bytes(&mut file, amount_meta_frame)?;
+        file.seek(SeekFrom::Start(pointer_fragment_reference_table))?;
+        let fragments_store = FrameStore::new_from_bytes(&mut file, amount_fragments)?;
 
         // decode image
         trace!("reading the image data pointer table");
@@ -183,7 +183,7 @@ impl WanImage {
 
         Ok(WanImage {
             image_store,
-            meta_frame_store,
+            frames: fragments_store,
             anim_store,
             palette,
             raw_particule_table,
@@ -235,7 +235,7 @@ impl WanImage {
             "start of meta frame reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let meta_frame_references = self.meta_frame_store.write(file)?;
+        let fragments_references = self.frames.write(file)?;
 
         trace!(
             "start of the animation offset: {}",
@@ -268,11 +268,11 @@ impl WanImage {
         sir0_offsets.push(pointer_palette as u32);
 
         trace!(
-            "start of the meta_frame reference offset: {}",
+            "start of the fragment reference offset: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let meta_frame_reference_offset = file.seek(SeekFrom::Current(0))?;
-        for reference in meta_frame_references {
+        let fragment_reference_offset = file.seek(SeekFrom::Current(0))?;
+        for reference in fragments_references {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
             reference.write(file)?;
         }
@@ -321,7 +321,7 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        (meta_frame_reference_offset as u32).write(file)?;
+        (fragment_reference_offset as u32).write(file)?;
 
         if let Some(particule_offset) = particule_offset {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
@@ -397,15 +397,15 @@ impl WanImage {
 
     /// Return the image corresponding to the resolution and the palette of given meta-frame.
     /// Doesn't perform flipping or any other transformation other than the resolution and the palette.
-    pub fn get_image_for_meta_frame(
+    pub fn get_image_for_fragment(
         &self,
-        metaframe: &MetaFrame,
+        fragment: &Fragment,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
-        let image_bytes = match self.image_store.images.get(metaframe.image_index) {
+        let image_bytes = match self.image_store.images.get(fragment.image_index) {
             Some(b) => b,
-            None => return Err(ImageBytesToImageError::NoImageBytes(metaframe.image_index)),
+            None => return Err(ImageBytesToImageError::NoImageBytes(fragment.image_index)),
         };
 
-        image_bytes.get_image(&self.palette, &metaframe.resolution, metaframe.pal_idx)
+        image_bytes.get_image(&self.palette, &fragment.resolution, fragment.pal_idx)
     }
 }

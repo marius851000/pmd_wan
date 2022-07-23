@@ -2,7 +2,7 @@ mod tests {
     use image::{io::Reader as ImageReader, ImageFormat};
     use std::{collections::HashMap, io::Cursor};
 
-    use crate::{insert_meta_frame_in_wanimage, Animation, AnimationFrame, WanImage};
+    use crate::{insert_fragment_in_wanimage, Animation, AnimationFrame, WanImage};
 
     #[test]
     fn encode_and_decode_static_wan() {
@@ -27,7 +27,7 @@ mod tests {
         assert!(palette.len() <= 16);
         palette.resize(16, [0, 0, 0, 255]);
         wanimage.palette.palette = palette.clone();
-        let frame_id = insert_meta_frame_in_wanimage(
+        let frame_id = insert_fragment_in_wanimage(
             image_paletted,
             image.width() as u16,
             image.height() as u16,
@@ -59,8 +59,8 @@ mod tests {
             inserted_frame
         );
         assert_eq!(
-            decoded_wanimage.meta_frame_store.meta_frame_groups[frame_id as usize]
-                .meta_frames
+            decoded_wanimage.frames.frames[frame_id as usize]
+                .fragments
                 .len(),
             4
         );

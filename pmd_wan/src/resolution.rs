@@ -14,7 +14,7 @@ static VALID_SIZE_AND_INDICE: [([u8; 2], [u8; 2]); 12] = [
     ([32, 64], [3, 2]),
 ];
 
-/// Size of an [`Image`] (computed from [`MetaFrame`])
+/// Size of an [`Image`] (computed from [`Fragment`])
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Resolution {
     pub x: u8,

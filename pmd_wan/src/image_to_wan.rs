@@ -1,4 +1,4 @@
-use crate::{encode_image_pixel, ImageBytes, MetaFrame, MetaFrameGroup, Resolution, WanImage};
+use crate::{encode_image_pixel, Fragment, Frame, ImageBytes, Resolution, WanImage};
 use anyhow::{bail, Context};
 use std::convert::TryInto;
 
@@ -153,7 +153,7 @@ impl ImageBuffer {
     }
 }
 
-pub fn insert_meta_frame_in_wanimage(
+pub fn insert_fragment_in_wanimage(
     image: Vec<u8>,
     width: u16,
     height: u16,
@@ -174,59 +174,56 @@ pub fn insert_meta_frame_in_wanimage(
     let image_buffer = ImageBuffer::new_from_vec(image, width, height)
         .context("The input image don't correspond to the dimension of it")?;
 
-    let meta_frames = if let Some(meta_frames) =
-        insert_meta_frame_pos_in_wan_image(wanimage, pal_id, &image_buffer, position_x, position_y)?
+    let fragments = if let Some(fragments) =
+        insert_fragment_pos_in_wan_image(wanimage, pal_id, &image_buffer, position_x, position_y)?
     {
-        meta_frames
+        fragments
     } else {
         return Ok(None);
     };
 
-    Ok(if !meta_frames.is_empty() {
-        let meta_frame_group_id = wanimage.meta_frame_store.meta_frame_groups.len();
-        wanimage
-            .meta_frame_store
-            .meta_frame_groups
-            .push(MetaFrameGroup { meta_frames });
-        Some(meta_frame_group_id)
+    Ok(if !fragments.is_empty() {
+        let frame_id = wanimage.frames.frames.len();
+        wanimage.frames.frames.push(Frame { fragments });
+        Some(frame_id)
     } else {
         None
     })
 }
 
-fn insert_meta_frame_pos_in_wan_image(
+fn insert_fragment_pos_in_wan_image(
     wanimage: &mut WanImage,
     pal_id: u16,
     image_buffer: &ImageBuffer,
     upper_image_x: i32,
     upper_image_y: i32,
-) -> anyhow::Result<Option<Vec<MetaFrame>>> {
-    let mut meta_frames = Vec::new();
+) -> anyhow::Result<Option<Vec<Fragment>>> {
+    let mut fragments = Vec::new();
     let mut image_alloc_counter = 0;
 
     // Chunk the image into 64x64 group, the max meta frame size
     const MAX_META_FRAME_SIZE: u16 = 64;
-    for meta_frame_segment_x in
+    for fragment_segment_x in
         0..(image_buffer.width() + MAX_META_FRAME_SIZE - 1) / MAX_META_FRAME_SIZE
     {
-        for meta_frame_segment_y in
+        for fragment_segment_y in
             0..(image_buffer.height() + MAX_META_FRAME_SIZE - 1) / MAX_META_FRAME_SIZE
         {
-            let mut meta_frame_x =
-                upper_image_x + MAX_META_FRAME_SIZE as i32 * meta_frame_segment_x as i32;
-            let mut meta_frame_y =
-                upper_image_y + MAX_META_FRAME_SIZE as i32 * meta_frame_segment_y as i32;
+            let mut fragment_x =
+                upper_image_x + MAX_META_FRAME_SIZE as i32 * fragment_segment_x as i32;
+            let mut fragment_y =
+                upper_image_y + MAX_META_FRAME_SIZE as i32 * fragment_segment_y as i32;
 
             let mut cut_section = image_buffer.get_fragment(
-                MAX_META_FRAME_SIZE * meta_frame_segment_x,
-                MAX_META_FRAME_SIZE * meta_frame_segment_y,
+                MAX_META_FRAME_SIZE * fragment_segment_x,
+                MAX_META_FRAME_SIZE * fragment_segment_y,
                 MAX_META_FRAME_SIZE,
                 MAX_META_FRAME_SIZE,
                 0,
             );
-            meta_frame_y += cut_section.cut_top() as i32;
+            fragment_y += cut_section.cut_top() as i32;
             cut_section.cut_bottom();
-            meta_frame_x += cut_section.cut_left() as i32;
+            fragment_x += cut_section.cut_left() as i32;
             cut_section.cut_right();
 
             if !cut_section.have_pixel() {
@@ -234,47 +231,42 @@ fn insert_meta_frame_pos_in_wan_image(
             }
 
             //no panic: resolution should always be less than 64x64, and be an already valid resolution, to which it can fall back if no smaller images are avalaible
-            let meta_frame_size = Resolution::find_smaller_containing(Resolution {
+            let fragment_size = Resolution::find_smaller_containing(Resolution {
                 x: cut_section.width() as u8,
                 y: cut_section.height() as u8,
             })
             .unwrap();
 
-            let buffer_to_write = cut_section.get_fragment(
-                0,
-                0,
-                meta_frame_size.x as u16,
-                meta_frame_size.y as u16,
-                0,
-            );
+            let buffer_to_write =
+                cut_section.get_fragment(0, 0, fragment_size.x as u16, fragment_size.y as u16, 0);
 
             let image_bytes_id = wanimage.image_store.images.len();
             wanimage.image_store.images.push(ImageBytes {
-                mixed_pixels: encode_image_pixel(buffer_to_write.buffer(), &meta_frame_size)
+                mixed_pixels: encode_image_pixel(buffer_to_write.buffer(), &fragment_size)
                     .context("failed to encode the input byte. This is an internal error")?,
                 z_index: 1,
             });
 
-            let offset_y = meta_frame_y.try_into().context("The image is too large")?;
-            meta_frames.push(MetaFrame {
+            let offset_y = fragment_y.try_into().context("The image is too large")?;
+            fragments.push(Fragment {
                 unk1: 0,
                 image_alloc_counter,
                 unk3_4: None,
                 unk5: false,
                 image_index: image_bytes_id,
                 offset_y,
-                offset_x: meta_frame_x.try_into().context("The image is too high")?,
+                offset_x: fragment_x.try_into().context("The image is too high")?,
                 v_flip: false,
                 h_flip: false,
                 is_mosaic: false,
                 pal_idx: pal_id,
-                resolution: meta_frame_size,
+                resolution: fragment_size,
             });
-            image_alloc_counter += meta_frame_size.chunk_to_allocate_for_metaframe();
+            image_alloc_counter += fragment_size.chunk_to_allocate_for_metaframe();
         }
     }
 
-    if meta_frames.is_empty() {
+    if fragments.is_empty() {
         return Ok(None);
     }
 
@@ -282,7 +274,7 @@ fn insert_meta_frame_pos_in_wan_image(
         .size_to_allocate_for_all_metaframe
         .max(image_alloc_counter as u32);
 
-    Ok(Some(meta_frames))
+    Ok(Some(fragments))
 }
 
 #[test]
@@ -363,20 +355,20 @@ fn get_image_fragment_test() {
 fn insert_frame_flat_test() {
     let mut wanimage = WanImage::new(crate::SpriteType::PropsUI);
     wanimage.palette.palette.push([255, 255, 255, 128]);
-    let meta_frame_group_id = insert_meta_frame_in_wanimage(vec![1; 36], 6, 6, &mut wanimage, 0)
+    let frame_id = insert_fragment_in_wanimage(vec![1; 36], 6, 6, &mut wanimage, 0)
         .unwrap()
         .unwrap();
-    let meta_frame_group = &wanimage.meta_frame_store.meta_frame_groups[meta_frame_group_id];
-    let meta_frame = &meta_frame_group.meta_frames[0];
-    assert_eq!(meta_frame.resolution, Resolution { x: 8, y: 8 });
-    assert_eq!(meta_frame.pal_idx, 0);
+    let frame = &wanimage.frames.frames[frame_id];
+    let fragment = &frame.fragments[0];
+    assert_eq!(fragment.resolution, Resolution { x: 8, y: 8 });
+    assert_eq!(fragment.pal_idx, 0);
 }
 
 #[test]
 fn insert_empty_image_test() {
     let mut wanimage = WanImage::new(crate::SpriteType::PropsUI);
     assert!(
-        insert_meta_frame_in_wanimage(vec![0; 4], 2, 2, &mut wanimage, 0)
+        insert_fragment_in_wanimage(vec![0; 4], 2, 2, &mut wanimage, 0)
             .unwrap()
             .is_none()
     );

@@ -8,7 +8,7 @@ pub enum WanError {
     #[error("an image id reference the previous one, but it is the first image")]
     ImageIDPointBackButFirstImage,
     #[error("a metaframe is inferior to -1, but that is not valid (it is {0})")]
-    MetaFrameLessThanLessOne(i16),
+    FragmentLessThanLessOne(i16),
     #[error("While creating a meta frame store: the check for the offset of the pointer of the animation group are not valid!")]
     InvalidOffset,
     #[error("the resolution for an image wasn't found")]

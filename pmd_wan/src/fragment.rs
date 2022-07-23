@@ -6,11 +6,11 @@ use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
-/// A [`MetaFrame`] may reference an [`crate::ImageBytes`], that will form a single (or all if small enought) part of an [`crate::MetaFrameGroup`]
+/// A [`Fragment`] may reference an [`crate::ImageBytes`], that will form a single (or all if small enought) part of an [`crate::Frame`]
 #[derive(Debug, PartialEq, Eq)]
-pub struct MetaFrame {
+pub struct Fragment {
     pub unk1: u16,
-    /// Seems to be related to allocation. Each MetaFrame in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
+    /// Seems to be related to allocation. Each Fragment in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
     /// This can't be generalised to every sprites
     pub image_alloc_counter: u16,
     /// Two value with unknown property in the offset y data.
@@ -28,13 +28,13 @@ pub struct MetaFrame {
     pub resolution: Resolution,
 }
 
-impl MetaFrame {
+impl Fragment {
     /// parse a metaframe from the file.
-    /// The second value is whether the "is_last" bit has been set to true, meaning it's the last MetaFrame from the MetaFrameGroup
+    /// The second value is whether the "is_last" bit has been set to true, meaning it's the last Fragment from the Frame
     pub fn new_from_bytes<F: Read>(
         file: &mut F,
         previous_image: Option<usize>,
-    ) -> Result<(MetaFrame, bool), WanError> {
+    ) -> Result<(Fragment, bool), WanError> {
         trace!("parsing a meta-frame");
         let image_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
@@ -45,7 +45,7 @@ impl MetaFrame {
                 if x >= 0 {
                     x as usize
                 } else {
-                    return Err(WanError::MetaFrameLessThanLessOne(x));
+                    return Err(WanError::FragmentLessThanLessOne(x));
                 }
             }
         };
@@ -89,7 +89,7 @@ impl MetaFrame {
         let pal_idx = ((0xF000 & unk2) >> 12) as u16;
 
         Ok((
-            MetaFrame {
+            Fragment {
                 unk1,
                 image_alloc_counter: unk2,
                 unk3_4,

@@ -1,19 +1,19 @@
-use crate::{MetaFrameGroup, WanError};
+use crate::{Frame, WanError};
 use anyhow::Context;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug, Default)]
-pub struct MetaFrameStore {
-    pub meta_frame_groups: Vec<MetaFrameGroup>,
+pub struct FrameStore {
+    pub frames: Vec<Frame>,
 }
 
-impl MetaFrameStore {
+impl FrameStore {
     // assume that the pointer is already well positionned
     pub fn new_from_bytes<F: Read + Seek>(
         file: &mut F,
         nb_meta_frame: u64,
-    ) -> Result<MetaFrameStore, WanError> {
+    ) -> Result<FrameStore, WanError> {
         let mut meta_frame_groups = Vec::new();
         let mut last_pointer = None;
 
@@ -46,15 +46,17 @@ impl MetaFrameStore {
             file.seek(SeekFrom::Start(
                 meta_frame_reference[meta_frame_id as usize],
             ))?;
-            meta_frame_groups.push(MetaFrameGroup::new_from_bytes(file)?);
+            meta_frame_groups.push(Frame::new_from_bytes(file)?);
         }
-        Ok(MetaFrameStore { meta_frame_groups })
+        Ok(FrameStore {
+            frames: meta_frame_groups,
+        })
     }
 
     pub fn write<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<Vec<u32>> {
         let mut meta_frame_references = vec![];
 
-        for meta_frame_group in &self.meta_frame_groups {
+        for meta_frame_group in &self.frames {
             meta_frame_references.push(file.seek(SeekFrom::Current(0))? as u32);
             meta_frame_group.write(file).with_context(move || {
                 format!("can't write the meta frame group {:?}", meta_frame_group)
