@@ -84,6 +84,11 @@ impl Resolution {
         }
         optimal_result.map(|x| x.2)
     }
+
+    /// Return the number of pixel an image with this resolution can contain (x×y)
+    pub fn nb_pixels(self) -> u16 {
+        self.x as u16 * self.y as u16
+    }
 }
 
 //TODO: check by decoding every images too

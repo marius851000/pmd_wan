@@ -48,6 +48,9 @@ pub use animation::Animation;
 mod imagecompression;
 pub use imagecompression::*;
 
+mod fragment_flip;
+pub use fragment_flip::{FragmentFlip, FragmentFlipError};
+
 mod image_to_wan;
 pub use image_to_wan::insert_fragment_in_wanimage;
 
