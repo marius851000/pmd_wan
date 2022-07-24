@@ -9,6 +9,8 @@ pub enum FragmentFlipError {
     #[error("Incoherent resolution")]
     IncoherentResolution,
 }
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum FragmentFlip {
     Standard,
     FlipHorizontal,
@@ -68,6 +70,26 @@ impl FragmentFlip {
         }
         Ok(())
     }
+
+    // Return a pair of boolean. First boolean tell if it should be vertically flipped, second one if it should be horizontally flipped
+    pub fn to_bools(self) -> (bool, bool) {
+        match self {
+            Self::Standard => (false, false),
+            Self::FlipVertical => (true, false),
+            Self::FlipHorizontal => (false, true),
+            Self::FlipBoth => (true, true),
+        }
+    }
+
+    // Return the corresponding [`FragmentFlip`]. First boolean for vertical flip, second boolean for horizontal flip.
+    pub fn from_bools(flip_v: bool, flip_h: bool) -> FragmentFlip {
+        match (flip_v, flip_h) {
+            (false, false) => Self::Standard,
+            (true, false) => Self::FlipVertical,
+            (false, true) => Self::FlipHorizontal,
+            (true, true) => Self::FlipBoth,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -113,7 +135,7 @@ mod tests {
                 Resolution::new(3, 3),
                 &mut target_3x3
             ),
-            Err(FragmentFlipError::NonSquareResolution)
+            Err(FragmentFlipError::IncoherentResolution)
         );
 
         assert_eq!(
@@ -122,7 +144,7 @@ mod tests {
                 Resolution::new(3, 3),
                 &mut target_4x4
             ),
-            Err(FragmentFlipError::NonSquareResolution)
+            Err(FragmentFlipError::IncoherentResolution)
         );
 
         assert_eq!(
@@ -133,5 +155,22 @@ mod tests {
             ),
             Err(FragmentFlipError::NonSquareResolution)
         );
+    }
+
+    #[test]
+    fn fragment_flip_convert_to_from_boolean() {
+        let expected = [
+            (FragmentFlip::Standard, (false, false)),
+            (FragmentFlip::FlipHorizontal, (false, true)),
+            (FragmentFlip::FlipVertical, (true, false)),
+            (FragmentFlip::FlipBoth, (true, true)),
+        ];
+        for (fragment_flip, boolean_flip) in &expected {
+            assert_eq!(&fragment_flip.to_bools(), boolean_flip);
+            assert_eq!(
+                &FragmentFlip::from_bools(boolean_flip.0, boolean_flip.1),
+                fragment_flip
+            )
+        }
     }
 }

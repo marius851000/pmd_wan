@@ -1,4 +1,5 @@
 use crate::get_bit_u16;
+use crate::FragmentFlip;
 use crate::Resolution;
 use crate::WanError;
 use anyhow::bail;
@@ -21,8 +22,7 @@ pub struct Fragment {
     pub image_index: usize,
     pub offset_y: i8,
     pub offset_x: i16,
-    pub v_flip: bool,
-    pub h_flip: bool,
+    pub flip: FragmentFlip,
     pub is_mosaic: bool,
     pub pal_idx: u16,
     pub resolution: Resolution,
@@ -81,6 +81,7 @@ impl Fragment {
         let size_indice_x = ((0xC000 & offset_x_data) >> (8 + 6)) as u8;
         let v_flip = get_bit_u16(offset_x_data, 2).unwrap(); //as no panic as before
         let h_flip = get_bit_u16(offset_x_data, 3).unwrap();
+        let flip = FragmentFlip::from_bools(v_flip, h_flip);
         let is_last = get_bit_u16(offset_x_data, 4).unwrap();
         let unk5 = get_bit_u16(offset_x_data, 5).unwrap();
         let offset_x = (offset_x_data & 0x01FF) as i16 - 256; //range: 0-511
@@ -97,8 +98,7 @@ impl Fragment {
                 image_index,
                 offset_x,
                 offset_y,
-                v_flip,
-                h_flip,
+                flip,
                 is_mosaic,
                 pal_idx,
                 resolution: match Resolution::from_indice(size_indice_x, size_indice_y) {
@@ -170,9 +170,11 @@ impl Fragment {
             );
         }
 
+        let (v_flip, h_flip) = self.flip.to_bools();
+
         let offset_x_data: u16 = ((size_indice_x as u16) << (8 + 6))
-            + ((self.v_flip as u16) << (8 + 5))
-            + ((self.h_flip as u16) << (8 + 4))
+            + ((v_flip as u16) << (8 + 5))
+            + ((h_flip as u16) << (8 + 4))
             + ((is_last as u16) << (8 + 3))
             + ((self.unk5 as u16) << (8 + 2))
             + (((written_offset_x) as u16) & 0x01FF);

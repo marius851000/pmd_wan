@@ -1,4 +1,4 @@
-use crate::{encode_image_pixel, Fragment, Frame, ImageBytes, Resolution, WanImage};
+use crate::{encode_image_pixel, Fragment, FragmentFlip, Frame, ImageBytes, Resolution, WanImage};
 use anyhow::{bail, Context};
 use std::convert::TryInto;
 
@@ -256,8 +256,7 @@ fn insert_fragment_pos_in_wan_image(
                 image_index: image_bytes_id,
                 offset_y,
                 offset_x: fragment_x.try_into().context("The image is too high")?,
-                v_flip: false,
-                h_flip: false,
+                flip: FragmentFlip::Standard,
                 is_mosaic: false,
                 pal_idx: pal_id,
                 resolution: fragment_size,
