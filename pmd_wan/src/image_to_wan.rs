@@ -1,4 +1,4 @@
-use crate::{encode_image_pixel, Fragment, FragmentFlip, Frame, ImageBytes, Resolution, WanImage};
+use crate::{encode_fragment_pixels, Fragment, FragmentFlip, Frame, ImageBytes, FragmentResolution, WanImage};
 use anyhow::{bail, Context};
 use std::convert::TryInto;
 
@@ -231,7 +231,7 @@ fn insert_fragment_pos_in_wan_image(
             }
 
             //no panic: resolution should always be less than 64x64, and be an already valid resolution, to which it can fall back if no smaller images are avalaible
-            let fragment_size = Resolution::find_smaller_containing(Resolution {
+            let fragment_size = FragmentResolution::find_smaller_containing(FragmentResolution {
                 x: cut_section.width() as u8,
                 y: cut_section.height() as u8,
             })
@@ -242,7 +242,7 @@ fn insert_fragment_pos_in_wan_image(
 
             let image_bytes_id = wanimage.image_store.images.len();
             wanimage.image_store.images.push(ImageBytes {
-                mixed_pixels: encode_image_pixel(buffer_to_write.buffer(), &fragment_size)
+                mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), &fragment_size)
                     .context("failed to encode the input byte. This is an internal error")?,
                 z_index: 1,
             });
@@ -359,7 +359,7 @@ fn insert_frame_flat_test() {
         .unwrap();
     let frame = &wanimage.frames.frames[frame_id];
     let fragment = &frame.fragments[0];
-    assert_eq!(fragment.resolution, Resolution { x: 8, y: 8 });
+    assert_eq!(fragment.resolution, FragmentResolution { x: 8, y: 8 });
     assert_eq!(fragment.pal_idx, 0);
 }
 

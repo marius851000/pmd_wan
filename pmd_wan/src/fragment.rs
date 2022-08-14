@@ -1,6 +1,6 @@
+use crate::FragmentResolution;
 use crate::get_bit_u16;
 use crate::FragmentFlip;
-use crate::Resolution;
 use crate::WanError;
 use anyhow::bail;
 use binwrite::BinWrite;
@@ -11,7 +11,7 @@ use std::io::{Read, Write};
 #[derive(Debug, PartialEq, Eq)]
 pub struct Fragment {
     pub unk1: u16,
-    /// Seems to be related to allocation. Each Fragment in the group should increment it from the value of [`Resolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
+    /// Seems to be related to allocation. Each Fragment in the group should increment it from the value of [`FragmentResolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
     /// This can't be generalised to every sprites
     pub image_alloc_counter: u16,
     /// Two value with unknown property in the offset y data.
@@ -25,7 +25,7 @@ pub struct Fragment {
     pub flip: FragmentFlip,
     pub is_mosaic: bool,
     pub pal_idx: u16,
-    pub resolution: Resolution,
+    pub resolution: FragmentResolution,
 }
 
 impl Fragment {
@@ -101,7 +101,7 @@ impl Fragment {
                 flip,
                 is_mosaic,
                 pal_idx,
-                resolution: match Resolution::from_indice(size_indice_x, size_indice_y) {
+                resolution: match FragmentResolution::from_indice(size_indice_x, size_indice_y) {
                     Some(r) => r,
                     None => {
                         return Err(WanError::InvalidResolutionIndice(

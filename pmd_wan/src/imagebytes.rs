@@ -5,7 +5,7 @@ use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-use crate::{CompressionMethod, Palette, Resolution, SpriteType, WanError};
+use crate::{CompressionMethod, Palette, FragmentResolution, SpriteType, WanError};
 
 #[derive(Error, Debug)]
 pub enum ImageBytesToImageError {
@@ -200,7 +200,7 @@ impl ImageBytes {
     pub fn get_image(
         &self,
         palette: &Palette,
-        resolution: &Resolution,
+        resolution: &FragmentResolution,
         palette_id: u16,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
         if resolution.x == 0 || resolution.y == 0 {
@@ -210,7 +210,7 @@ impl ImageBytes {
         let mut pixels: Vec<u8> =
             Vec::with_capacity(resolution.x as usize * resolution.y as usize * 4);
 
-        for pixel in decode_image_pixel(&self.mixed_pixels, resolution)? {
+        for pixel in decode_fragment_pixels(&self.mixed_pixels, resolution)? {
             let mut color = if pixel == 0 {
                 [0, 0, 0, 0]
             } else {
@@ -242,10 +242,10 @@ pub enum DecodeImageError {
     NoPixel,
 }
 
-/// Take the raw encoded image (from an [`ImageBytes`]), and decode them into a list of pixels
-pub fn decode_image_pixel(
+/// Take the raw encoded fragment (from an [`ImageBytes`]), and decode them into a list of pixels
+pub fn decode_fragment_pixels(
     pixels: &[u8],
-    resolution: &Resolution,
+    resolution: &FragmentResolution,
 ) -> Result<Vec<u8>, DecodeImageError> {
     if resolution.x % 8 != 0 {
         return Err(DecodeImageError::XResolutionNotMultipleEight(resolution.x));
@@ -283,7 +283,7 @@ pub fn decode_image_pixel(
     Ok(dest)
 }
 
-pub fn encode_image_pixel(pixels: &[u8], resolution: &Resolution) -> anyhow::Result<Vec<u8>> {
+pub fn encode_fragment_pixels(pixels: &[u8], resolution: &FragmentResolution) -> anyhow::Result<Vec<u8>> {
     if resolution.x % 8 != 0 || resolution.y % 8 != 0 {
         bail!(
             "The image resolution ({:?}) isn't a multiple of 8",

@@ -16,8 +16,8 @@ pub use frame::Frame;
 mod fragment;
 pub use fragment::Fragment;
 
-mod resolution;
-pub use resolution::Resolution;
+mod fragment_resolution;
+pub use fragment_resolution::FragmentResolution;
 
 mod frame_store;
 pub use frame_store::FrameStore;
@@ -27,7 +27,7 @@ pub use spritetype::SpriteType;
 
 mod imagebytes;
 pub use crate::imagebytes::{
-    decode_image_pixel, encode_image_pixel, DecodeImageError, ImageBytes, ImageBytesToImageError,
+    decode_fragment_pixels, encode_fragment_pixels, DecodeImageError, ImageBytes, ImageBytesToImageError,
 };
 
 mod palette;

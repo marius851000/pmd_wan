@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::Resolution;
+use crate::FragmentResolution;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum FragmentFlipError {
@@ -26,7 +26,7 @@ impl FragmentFlip {
     pub fn apply(
         &self,
         source: &[u8],
-        resolution: Resolution,
+        resolution: FragmentResolution,
         target: &mut [u8],
     ) -> Result<(), FragmentFlipError> {
         if resolution.x != resolution.y {
@@ -94,12 +94,12 @@ impl FragmentFlip {
 
 #[cfg(test)]
 mod tests {
-    use crate::{FragmentFlip, FragmentFlipError, Resolution};
+    use crate::{FragmentFlip, FragmentFlipError, FragmentResolution};
 
     #[test]
     fn test_tile_flip_apply() {
         let test_data_4x4 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4, 3, 2, 1];
-        let resolution = Resolution::new(4, 4);
+        let resolution = FragmentResolution::new(4, 4);
         let mut target_4x4 = [0; 16];
         (FragmentFlip::Standard)
             .apply(&test_data_4x4, resolution, &mut target_4x4)
@@ -125,14 +125,14 @@ mod tests {
         let mut target_3x3 = [0; 9];
         let test_data_3x3 = [3, 2, 1, 14, 13, 12, 5, 2, 6];
         (FragmentFlip::FlipBoth)
-            .apply(&test_data_3x3, Resolution::new(3, 3), &mut target_3x3)
+            .apply(&test_data_3x3, FragmentResolution::new(3, 3), &mut target_3x3)
             .unwrap();
         assert_eq!(target_3x3, [6, 2, 5, 12, 13, 14, 1, 2, 3]);
 
         assert_eq!(
             (FragmentFlip::FlipVertical).apply(
                 &test_data_4x4,
-                Resolution::new(3, 3),
+                FragmentResolution::new(3, 3),
                 &mut target_3x3
             ),
             Err(FragmentFlipError::IncoherentResolution)
@@ -141,7 +141,7 @@ mod tests {
         assert_eq!(
             (FragmentFlip::FlipVertical).apply(
                 &test_data_3x3,
-                Resolution::new(3, 3),
+                FragmentResolution::new(3, 3),
                 &mut target_4x4
             ),
             Err(FragmentFlipError::IncoherentResolution)
@@ -150,7 +150,7 @@ mod tests {
         assert_eq!(
             (FragmentFlip::FlipVertical).apply(
                 &test_data_4x4,
-                Resolution::new(2, 8),
+                FragmentResolution::new(2, 8),
                 &mut target_4x4
             ),
             Err(FragmentFlipError::NonSquareResolution)
