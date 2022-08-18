@@ -67,7 +67,7 @@ impl FragmentFlip {
             Self::FlipBoth => {
                 target.copy_from_slice(&source.iter().copied().rev().collect::<Vec<u8>>());
             }
-        }
+        };
         Ok(())
     }
 
@@ -125,7 +125,11 @@ mod tests {
         let mut target_3x3 = [0; 9];
         let test_data_3x3 = [3, 2, 1, 14, 13, 12, 5, 2, 6];
         (FragmentFlip::FlipBoth)
-            .apply(&test_data_3x3, FragmentResolution::new(3, 3), &mut target_3x3)
+            .apply(
+                &test_data_3x3,
+                FragmentResolution::new(3, 3),
+                &mut target_3x3,
+            )
             .unwrap();
         assert_eq!(target_3x3, [6, 2, 5, 12, 13, 14, 1, 2, 3]);
 

@@ -5,7 +5,7 @@ use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-use crate::{CompressionMethod, Palette, FragmentResolution, SpriteType, WanError};
+use crate::{CompressionMethod, FragmentResolution, Palette, SpriteType, WanError};
 
 #[derive(Error, Debug)]
 pub enum ImageBytesToImageError {
@@ -283,7 +283,10 @@ pub fn decode_fragment_pixels(
     Ok(dest)
 }
 
-pub fn encode_fragment_pixels(pixels: &[u8], resolution: &FragmentResolution) -> anyhow::Result<Vec<u8>> {
+pub fn encode_fragment_pixels(
+    pixels: &[u8],
+    resolution: &FragmentResolution,
+) -> anyhow::Result<Vec<u8>> {
     if resolution.x % 8 != 0 || resolution.y % 8 != 0 {
         bail!(
             "The image resolution ({:?}) isn't a multiple of 8",

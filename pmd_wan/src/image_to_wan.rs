@@ -1,4 +1,6 @@
-use crate::{encode_fragment_pixels, Fragment, FragmentFlip, Frame, ImageBytes, FragmentResolution, WanImage};
+use crate::{
+    encode_fragment_pixels, Fragment, FragmentFlip, FragmentResolution, Frame, ImageBytes, WanImage,
+};
 use anyhow::{bail, Context};
 use std::convert::TryInto;
 

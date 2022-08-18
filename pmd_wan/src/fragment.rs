@@ -1,6 +1,6 @@
-use crate::FragmentResolution;
 use crate::get_bit_u16;
 use crate::FragmentFlip;
+use crate::FragmentResolution;
 use crate::WanError;
 use anyhow::bail;
 use binwrite::BinWrite;

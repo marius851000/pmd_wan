@@ -61,7 +61,9 @@ impl FragmentResolution {
     /// Return the smallest resolution (in term of allocation) that can contain the target resolution.
     ///
     /// If there are multiple posible resolution with the same number of size to allocate, returnt the one with the lesser amount of pixel. If there are still multiple remaining resolution, return any possible one (implementation detail: they aren't random).
-    pub fn find_smaller_containing(target_resolution: FragmentResolution) -> Option<FragmentResolution> {
+    pub fn find_smaller_containing(
+        target_resolution: FragmentResolution,
+    ) -> Option<FragmentResolution> {
         let mut optimal_result: Option<(u16, u16, FragmentResolution)> = None; // first u16 is number of chunk to allocate for the metaframe, second u16 is the number of pixel, third is the optimal resolution right now
         for entry in &VALID_SIZE_AND_INDICE {
             let resolution_entry = FragmentResolution::new(entry.0[0], entry.0[1]);
