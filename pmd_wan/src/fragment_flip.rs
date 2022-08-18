@@ -22,16 +22,12 @@ impl FragmentFlip {
     /// Flip a tile with the corresponding flip value
     /// source and target are image using an u8 per pixel, row by row, from top-left most to bottom-right.
     /// target and source should have the correct number of pixel. Otherwise, and error is returned.
-    /// An error is also returned if the image isn’t a square
     pub fn apply(
         &self,
         source: &[u8],
         resolution: FragmentResolution,
         target: &mut [u8],
     ) -> Result<(), FragmentFlipError> {
-        if resolution.x != resolution.y {
-            return Err(FragmentFlipError::NonSquareResolution);
-        };
         if resolution.nb_pixels() as usize != source.len()
             || resolution.nb_pixels() as usize != target.len()
         {
@@ -151,14 +147,18 @@ mod tests {
             Err(FragmentFlipError::IncoherentResolution)
         );
 
-        assert_eq!(
-            (FragmentFlip::FlipVertical).apply(
+        (FragmentFlip::FlipVertical)
+            .apply(
                 &test_data_4x4,
                 FragmentResolution::new(2, 8),
-                &mut target_4x4
-            ),
-            Err(FragmentFlipError::NonSquareResolution)
-        );
+                &mut target_4x4,
+            )
+            .unwrap();
+
+        assert_eq!(
+            target_4x4,
+            [1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 3, 4, 1, 2]
+        )
     }
 
     #[test]
