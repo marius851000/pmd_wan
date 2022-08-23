@@ -23,7 +23,7 @@ impl FragmentFlip {
     /// source and target are image using an u8 per pixel, row by row, from top-left most to bottom-right.
     /// target and source should have the correct number of pixel. Otherwise, and error is returned.
     pub fn apply(
-        &self,
+        self,
         source: &[u8],
         resolution: FragmentResolution,
         target: &mut [u8],

@@ -52,8 +52,27 @@ pub use imagecompression::*;
 mod fragment_flip;
 pub use fragment_flip::{FragmentFlip, FragmentFlipError};
 
+mod fragment_finder;
+pub use fragment_finder::{find_fragments_in_images, FragmentFinderData, FragmentFinderError};
+
 mod image_to_wan;
 pub use image_to_wan::insert_fragment_in_wanimage;
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
+pub struct GeneralResolution {
+    pub x: u32,
+    pub y: u32,
+}
+
+impl GeneralResolution {
+    pub fn new(x: u32, y: u32) -> Self {
+        Self { x, y }
+    }
+
+    pub fn nb_pixels(&self) -> u64 {
+        (self.x as u64) * (self.y as u64)
+    }
+}
 
 fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
     if id < 16 {
