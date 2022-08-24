@@ -28,3 +28,7 @@ image = "0.24.2"
 [[bench]]
 name = "parse"
 harness = false
+
+[[bench]]
+name = "find_fragment"
+harness = false
