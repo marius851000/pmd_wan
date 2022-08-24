@@ -1,8 +1,11 @@
 mod tests {
     use image::{io::Reader as ImageReader, ImageFormat};
-    use std::{collections::HashMap, io::Cursor};
+    use std::io::Cursor;
 
-    use crate::{insert_fragment_in_wanimage, Animation, AnimationFrame, WanImage};
+    use crate::{
+        image_tool::{image_to_paletted_bytes, ImageToPaletteBytesData},
+        insert_fragment_in_wanimage, Animation, AnimationFrame, WanImage,
+    };
 
     #[test]
     fn encode_and_decode_static_wan() {
@@ -11,22 +14,13 @@ mod tests {
         reader.set_format(ImageFormat::Png);
         let image = reader.decode().unwrap().into_rgba8();
 
-        let mut palette = vec![[0, 0, 0, 0]];
-        let mut palette_map = HashMap::new();
-        let mut image_paletted =
-            Vec::with_capacity(image.width() as usize * image.height() as usize);
-        for color in image.pixels() {
-            if palette_map.get(color).is_none() {
-                palette_map.insert(color.clone(), palette.len());
-                palette.push(color.0);
-            };
-            image_paletted.push(*palette_map.get(color).unwrap() as u8);
-        }
+        let mut palette_data = ImageToPaletteBytesData::default();
+        let image_paletted = image_to_paletted_bytes(&mut palette_data, &image).unwrap();
 
         let mut wanimage = WanImage::new(crate::SpriteType::PropsUI);
-        assert!(palette.len() <= 16);
-        palette.resize(16, [0, 0, 0, 255]);
-        wanimage.palette.palette = palette.clone();
+        assert!(palette_data.ordered.len() <= 16);
+        palette_data.ordered.resize(16, [0, 0, 0, 0]);
+        wanimage.palette.palette = palette_data.ordered.clone();
         let frame_id = insert_fragment_in_wanimage(
             image_paletted,
             image.width() as u16,
@@ -53,7 +47,7 @@ mod tests {
         wanimage.create_wan(&mut wan_cursor).unwrap();
 
         let decoded_wanimage = WanImage::decode_wan(&mut wan_cursor).unwrap();
-        assert_eq!(decoded_wanimage.palette.palette, palette);
+        assert_eq!(decoded_wanimage.palette.palette, palette_data.ordered);
         assert_eq!(
             decoded_wanimage.anim_store.anim_groups[0][0].frames[0],
             inserted_frame
@@ -62,7 +56,7 @@ mod tests {
             decoded_wanimage.frames.frames[frame_id as usize]
                 .fragments
                 .len(),
-            4
+            3
         );
     }
 }

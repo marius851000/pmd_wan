@@ -58,6 +58,8 @@ pub use fragment_finder::{find_fragments_in_images, FragmentFinderData, Fragment
 mod image_to_wan;
 pub use image_to_wan::insert_fragment_in_wanimage;
 
+pub mod image_tool;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct GeneralResolution {
     pub x: u32,
