@@ -14,7 +14,7 @@ pub enum FragmentFinderError {
     ImageTooBig(usize),
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub struct FragmentUse {
     pub x: i32,
     pub y: i32,
@@ -50,11 +50,11 @@ pub fn find_fragments_in_images(
     let mut fragment_buffer_both = [0; 64];
     let fragment_resolution = FragmentResolution::new(8, 8);
     let zero_buffer = [0; 64];
-    for (image_id, (image_pixels, resolution)) in images.into_iter().enumerate() {
+    for (image_id, (image_pixels, resolution)) in images.iter().enumerate() {
         if image_pixels.len() as u64 != resolution.nb_pixels() {
             return Err(FragmentFinderError::InvalidResolution(image_id));
         };
-        if image_pixels.len() == 0 {
+        if image_pixels.is_empty() {
             continue;
         };
         let (padded_image, padded_resolution) =
@@ -109,7 +109,7 @@ pub fn find_fragments_in_images(
                 }
                 result
                     .collected
-                    .entry(smallest.clone())
+                    .entry(*smallest)
                     .or_default()
                     .push(FragmentUse {
                         x: x_base as i32 - 7,
@@ -133,17 +133,13 @@ fn pad_seven_pixel(
     }
     let result_resolution = GeneralResolution::new(resolution.x + 14, resolution.y + 14);
     let mut result_px = Vec::with_capacity(result_resolution.nb_pixels() as usize);
-    for _ in 0..(result_resolution.x) * 7 {
-        result_px.push(0);
-    }
+    result_px.resize(result_resolution.x as usize * 7, 0);
     for line in image.chunks_exact(resolution.x as usize) {
         result_px.extend_from_slice(&[0; 7]);
         result_px.extend_from_slice(line);
         result_px.extend_from_slice(&[0; 7]);
     }
-    for _ in 0..(result_resolution.x) * 7 {
-        result_px.push(0);
-    }
+    result_px.resize(result_px.len() + (result_resolution.x as usize * 7), 0);
     Some((result_px, result_resolution))
 }
 
