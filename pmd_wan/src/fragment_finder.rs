@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use thiserror::Error;
 
-use crate::{FragmentFlip, FragmentResolution, GeneralResolution};
+use crate::{FragmentFlip, GeneralResolution, NormalizedBytes};
 
 #[derive(Debug, Error)]
 pub enum FragmentFinderError {
@@ -29,19 +29,19 @@ pub struct FragmentUse {
 /// The key is where they are used. The x or y may be negative.
 #[derive(Default)]
 pub struct FragmentFinderData {
-    pub collected: HashMap<[u8; 64], Vec<FragmentUse>>,
+    pub collected: HashMap<NormalizedBytes, Vec<FragmentUse>>,
 }
 
 impl FragmentFinderData {
     /// Add info about the usage of a fragment. Will add it if it already exist.
-    pub fn add_fragment_use(&mut self, bytes: [u8; 64], usage: FragmentUse) {
+    pub fn add_fragment_use(&mut self, bytes: NormalizedBytes, usage: FragmentUse) {
         self.collected.entry(bytes).or_default().push(usage);
     }
 
     /// Return a list with element sorted by the number of time they appear (most used appear first)
-    pub fn order_by_usage(&self) -> Vec<(&[u8; 64], &Vec<FragmentUse>)> {
+    pub fn order_by_usage(&self) -> Vec<(&NormalizedBytes, &Vec<FragmentUse>)> {
         let mut r = self.collected.iter().collect::<Vec<_>>();
-        r.sort_by_key(|x| x.0.len());
+        r.sort_by_key(|x| usize::MAX - x.1.len());
         r
     }
 }
@@ -60,10 +60,6 @@ pub fn find_fragments_in_images(
         collected: HashMap::new(),
     };
     let mut fragment_buffer = [0; 64];
-    let mut fragment_buffer_horizontal = [0; 64];
-    let mut fragment_buffer_vertical = [0; 64];
-    let mut fragment_buffer_both = [0; 64];
-    let fragment_resolution = FragmentResolution::new(8, 8);
     let zero_buffer = [0; 64];
     for (image_id, (image_pixels, resolution)) in images.iter().enumerate() {
         if image_pixels.len() as u64 != resolution.nb_pixels() {
@@ -88,48 +84,15 @@ pub fn find_fragments_in_images(
                 if fragment_buffer == zero_buffer {
                     continue;
                 }
-                // no unwrap: static valid resolution
-                (FragmentFlip::FlipHorizontal)
-                    .apply(
-                        &fragment_buffer,
-                        fragment_resolution,
-                        &mut fragment_buffer_horizontal,
-                    )
-                    .unwrap();
-                (FragmentFlip::FlipVertical)
-                    .apply(
-                        &fragment_buffer,
-                        fragment_resolution,
-                        &mut fragment_buffer_vertical,
-                    )
-                    .unwrap();
-                (FragmentFlip::FlipBoth)
-                    .apply(
-                        &fragment_buffer,
-                        fragment_resolution,
-                        &mut fragment_buffer_both,
-                    )
-                    .unwrap();
-                let mut smallest = &fragment_buffer;
-                let mut smallest_flip = FragmentFlip::Standard;
-                for (other_buffer, other_flip) in [
-                    (&fragment_buffer_horizontal, FragmentFlip::FlipHorizontal),
-                    (&fragment_buffer_vertical, FragmentFlip::FlipVertical),
-                    (&fragment_buffer_both, FragmentFlip::FlipBoth),
-                ] {
-                    if other_buffer < smallest {
-                        smallest = other_buffer;
-                        smallest_flip = other_flip;
-                    };
-                }
+                let (normalized, flip) = NormalizedBytes::new(fragment_buffer);
                 result.add_fragment_use(
-                    *smallest,
+                    normalized,
                     FragmentUse {
                         x: x_base as i32 - 7,
                         y: y_base as i32 - 7,
                         // no overflow: already checked at the beggining of the function
                         image_id: image_id as u16,
-                        flip: smallest_flip,
+                        flip,
                     },
                 );
             }
@@ -184,7 +147,7 @@ fn test_pad_seven_pixel() {
 mod tests {
     use crate::{
         find_fragments_in_images, fragment_finder::FragmentUse, FragmentFinderData, FragmentFlip,
-        GeneralResolution,
+        GeneralResolution, NormalizedBytes,
     };
 
     #[test]
@@ -200,11 +163,11 @@ mod tests {
         let small_image = [1, 2, 1, 2, 1, 2, 1, 5];
         let found =
             find_fragments_in_images(&[(&small_image, GeneralResolution::new(2, 4))]).unwrap();
-        let fragment_first = [
+        let (fragment_first, _) = NormalizedBytes::new([
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 1,
-        ];
+        ]);
 
         assert!(found
             .collected
@@ -236,7 +199,7 @@ mod tests {
             find_fragments_in_images(&[(&would_contain_zeroes, GeneralResolution::new(3, 3))])
                 .unwrap()
                 .collected
-                .get(&[0; 64])
+                .get(&NormalizedBytes::new([0; 64]).0)
                 .is_none()
         );
     }
@@ -253,19 +216,26 @@ mod tests {
             .iter()
             .enumerate()
         {
+            let (normalized, flip) = NormalizedBytes::new(*bytes);
             fragment_finder_data.add_fragment_use(
-                *bytes,
+                normalized,
                 FragmentUse {
                     x: 0,
                     y: 0,
                     image_id: counter as u16,
-                    flip: FragmentFlip::Standard,
+                    flip,
                 },
             );
         }
 
         let fragment_usage_ordered = fragment_finder_data.order_by_usage();
-        assert_eq!(fragment_usage_ordered[0].0, &bytes_present_twice);
-        assert_eq!(fragment_usage_ordered[1].0, &bytes_present_once);
+        assert_eq!(
+            fragment_usage_ordered[0].0,
+            &NormalizedBytes::new(bytes_present_twice).0
+        );
+        assert_eq!(
+            fragment_usage_ordered[1].0,
+            &NormalizedBytes::new(bytes_present_once).0
+        );
     }
 }

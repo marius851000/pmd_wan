@@ -60,6 +60,9 @@ pub use image_to_wan::insert_fragment_in_wanimage;
 
 pub mod image_tool;
 
+mod normalized_bytes;
+pub use normalized_bytes::NormalizedBytes;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct GeneralResolution {
     pub x: u32,
