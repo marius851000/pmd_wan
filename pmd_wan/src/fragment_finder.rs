@@ -27,8 +27,23 @@ pub struct FragmentUse {
 /// A tile may be Flip on either or both axis (or not at all). Only the smallest of the 4 possible flip is added in this collection (based on the comparaison of the resulting pixels, as Rust compare u8 arrays).
 /// The key is the pixels of the fragment (image are stored line by line, from top-left to bottom-right)
 /// The key is where they are used. The x or y may be negative.
+#[derive(Default)]
 pub struct FragmentFinderData {
     pub collected: HashMap<[u8; 64], Vec<FragmentUse>>,
+}
+
+impl FragmentFinderData {
+    /// Add info about the usage of a fragment. Will add it if it already exist.
+    pub fn add_fragment_use(&mut self, bytes: [u8; 64], usage: FragmentUse) {
+        self.collected.entry(bytes).or_default().push(usage);
+    }
+
+    /// Return a list with element sorted by the number of time they appear (most used appear first)
+    pub fn order_by_usage(&self) -> Vec<(&[u8; 64], &Vec<FragmentUse>)> {
+        let mut r = self.collected.iter().collect::<Vec<_>>();
+        r.sort_by_key(|x| x.0.len());
+        r
+    }
 }
 
 /// Find all 8×8 fragment all input images contain.
@@ -107,17 +122,16 @@ pub fn find_fragments_in_images(
                         smallest_flip = other_flip;
                     };
                 }
-                result
-                    .collected
-                    .entry(*smallest)
-                    .or_default()
-                    .push(FragmentUse {
+                result.add_fragment_use(
+                    *smallest,
+                    FragmentUse {
                         x: x_base as i32 - 7,
                         y: y_base as i32 - 7,
                         // no overflow: already checked at the beggining of the function
                         image_id: image_id as u16,
                         flip: smallest_flip,
-                    });
+                    },
+                );
             }
         }
     }
@@ -169,7 +183,8 @@ fn test_pad_seven_pixel() {
 #[cfg(test)]
 mod tests {
     use crate::{
-        find_fragments_in_images, fragment_finder::FragmentUse, FragmentFlip, GeneralResolution,
+        find_fragments_in_images, fragment_finder::FragmentUse, FragmentFinderData, FragmentFlip,
+        GeneralResolution,
     };
 
     #[test]
@@ -224,5 +239,33 @@ mod tests {
                 .get(&[0; 64])
                 .is_none()
         );
+    }
+
+    #[test]
+    pub fn test_order_by_usage() {
+        let mut bytes_present_twice = [0; 64];
+        bytes_present_twice[0] = 1;
+        let mut bytes_present_once = [0; 64];
+        bytes_present_once[0] = 2;
+        let mut fragment_finder_data = FragmentFinderData::default();
+
+        for (counter, bytes) in [bytes_present_twice, bytes_present_once, bytes_present_twice]
+            .iter()
+            .enumerate()
+        {
+            fragment_finder_data.add_fragment_use(
+                *bytes,
+                FragmentUse {
+                    x: 0,
+                    y: 0,
+                    image_id: counter as u16,
+                    flip: FragmentFlip::Standard,
+                },
+            );
+        }
+
+        let fragment_usage_ordered = fragment_finder_data.order_by_usage();
+        assert_eq!(fragment_usage_ordered[0].0, &bytes_present_twice);
+        assert_eq!(fragment_usage_ordered[1].0, &bytes_present_once);
     }
 }
