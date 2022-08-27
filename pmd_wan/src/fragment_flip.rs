@@ -67,7 +67,25 @@ impl FragmentFlip {
         Ok(())
     }
 
-    // Return a pair of boolean. First boolean tell if it should be vertically flipped, second one if it should be horizontally flipped
+    /// Return the [`FragmentFlip`] that would result in this flip applied to another one
+    pub fn flipped_fragment(self, other: FragmentFlip) -> FragmentFlip {
+        match (self, other) {
+            (Self::Standard, x) => x,
+            (x, Self::Standard) => x,
+            (Self::FlipHorizontal, Self::FlipHorizontal) => Self::Standard,
+            (Self::FlipVertical, Self::FlipVertical) => Self::Standard,
+            (Self::FlipBoth, Self::FlipBoth) => Self::Standard,
+            (Self::FlipHorizontal, Self::FlipVertical) => Self::FlipBoth,
+            (Self::FlipVertical, Self::FlipHorizontal) => Self::FlipBoth,
+            (Self::FlipBoth, Self::FlipHorizontal) => Self::FlipVertical,
+            (Self::FlipBoth, Self::FlipVertical) => Self::FlipHorizontal,
+            (Self::FlipHorizontal, Self::FlipBoth) => Self::FlipVertical,
+            (Self::FlipVertical, Self::FlipBoth) => Self::FlipHorizontal
+            
+        }
+    }
+
+    /// Return a pair of boolean. First boolean tell if it should be vertically flipped, second one if it should be horizontally flipped
     pub fn to_bools(self) -> (bool, bool) {
         match self {
             Self::Standard => (false, false),
@@ -77,7 +95,7 @@ impl FragmentFlip {
         }
     }
 
-    // Return the corresponding [`FragmentFlip`]. First boolean for vertical flip, second boolean for horizontal flip.
+    /// Return the corresponding [`FragmentFlip`]. First boolean for vertical flip, second boolean for horizontal flip.
     pub fn from_bools(flip_v: bool, flip_h: bool) -> FragmentFlip {
         match (flip_v, flip_h) {
             (false, false) => Self::Standard,
