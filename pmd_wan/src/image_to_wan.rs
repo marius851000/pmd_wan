@@ -271,9 +271,9 @@ fn insert_fragment_pos_in_wan_image(
         return Ok(None);
     }
 
-    wanimage.size_to_allocate_for_all_metaframe = wanimage
-        .size_to_allocate_for_all_metaframe
-        .max(image_alloc_counter as u32);
+    wanimage
+        .size_to_allocate_for_max_metaframe
+        .map(|current| current.max(image_alloc_counter as u32));
 
     Ok(Some(fragments))
 }

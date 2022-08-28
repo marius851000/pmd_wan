@@ -18,7 +18,8 @@ pub struct WanImage {
     /// true if the picture have 256 color, false if it only have 16
     pub is_256_color: bool,
     pub sprite_type: SpriteType,
-    pub size_to_allocate_for_all_metaframe: u32,
+    /// None automatically calculate it on write (TODO: consider just always calculating it on write)
+    pub size_to_allocate_for_max_metaframe: Option<u32>,
     pub unk2: u16,
 }
 
@@ -33,7 +34,7 @@ impl WanImage {
             raw_particule_table: Vec::new(),
             is_256_color: false,
             sprite_type,
-            size_to_allocate_for_all_metaframe: 0,
+            size_to_allocate_for_max_metaframe: None,
             unk2: 0,
         }
     }
@@ -89,7 +90,7 @@ impl WanImage {
         }
         let amount_animation_group = file.read_u16::<LE>()?;
 
-        let size_to_allocate_for_all_metaframe = file.read_u32::<LE>()?;
+        let size_to_allocate_for_max_metaframe = file.read_u32::<LE>()?;
 
         // fourth: decode image data info
         trace!("reading the image data info");
@@ -189,7 +190,7 @@ impl WanImage {
             raw_particule_table,
             is_256_color,
             sprite_type,
-            size_to_allocate_for_all_metaframe,
+            size_to_allocate_for_max_metaframe: Some(size_to_allocate_for_max_metaframe),
             unk2,
         })
     }
@@ -335,7 +336,13 @@ impl WanImage {
 
         (self.anim_store.anim_groups.len() as u16).write(file)?;
 
-        (self.size_to_allocate_for_all_metaframe, 0u32, 0u16).write(file)?;
+        let size_to_allocate_for_max_metaframe =
+            if let Some(v) = self.size_to_allocate_for_max_metaframe {
+                v
+            } else {
+                self.frames.generate_size_to_allocate_for_max_metaframe()
+            };
+        (size_to_allocate_for_max_metaframe, 0u32, 0u16).write(file)?;
 
         // images header
         trace!(

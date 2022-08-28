@@ -35,4 +35,14 @@ impl Frame {
         }
         Ok(())
     }
+
+    pub fn generate_size_to_allocate_for_max_metaframe(&self) -> u32 {
+        self.fragments
+            .iter()
+            .map(|x| {
+                x.image_alloc_counter as u32 + x.resolution.chunk_to_allocate_for_metaframe() as u32
+            })
+            .max()
+            .unwrap_or(0)
+    }
 }

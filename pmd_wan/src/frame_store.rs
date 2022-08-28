@@ -65,4 +65,12 @@ impl FrameStore {
 
         Ok(meta_frame_references)
     }
+
+    pub fn generate_size_to_allocate_for_max_metaframe(&self) -> u32 {
+        self.frames
+            .iter()
+            .map(|frame| frame.generate_size_to_allocate_for_max_metaframe())
+            .max()
+            .unwrap_or(0)
+    }
 }
