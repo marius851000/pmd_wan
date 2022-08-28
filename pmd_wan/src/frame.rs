@@ -4,7 +4,7 @@ use crate::{Fragment, WanError};
 use std::io::{Read, Write};
 
 /// A single frame of animation
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct Frame {
     pub fragments: Vec<Fragment>,
 }

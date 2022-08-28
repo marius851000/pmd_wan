@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use thiserror::Error;
 
@@ -14,7 +14,7 @@ pub enum FragmentFinderError {
     ImageTooBig(usize),
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, PartialOrd, Ord)]
 pub struct FragmentUse {
     pub x: i32,
     pub y: i32,
@@ -29,7 +29,7 @@ pub struct FragmentUse {
 /// The key is where they are used. The x or y may be negative.
 #[derive(Default)]
 pub struct FragmentFinderData {
-    pub collected: HashMap<NormalizedBytes, Vec<FragmentUse>>,
+    pub collected: BTreeMap<NormalizedBytes, Vec<FragmentUse>>,
 }
 
 impl FragmentFinderData {
@@ -57,7 +57,7 @@ pub fn find_fragments_in_images(
         return Err(FragmentFinderError::TooMuchImage(images.len()));
     }
     let mut result = FragmentFinderData {
-        collected: HashMap::new(),
+        collected: BTreeMap::new(),
     };
     let mut fragment_buffer = [0; 64];
     let zero_buffer = [0; 64];
@@ -101,7 +101,7 @@ pub fn find_fragments_in_images(
     Ok(result)
 }
 
-fn pad_seven_pixel(
+pub fn pad_seven_pixel(
     image: &[u8],
     resolution: GeneralResolution,
 ) -> Option<(Vec<u8>, GeneralResolution)> {
@@ -120,34 +120,12 @@ fn pad_seven_pixel(
     Some((result_px, result_resolution))
 }
 
-#[test]
-fn test_pad_seven_pixel() {
-    let image = [2, 3, 4, 5, 6, 7];
-    let mut expected_result = Vec::new();
-    for _ in 0..(7 + 7 + 2) * 7 {
-        expected_result.push(0);
-    }
-    expected_result.extend([
-        0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0, 0,
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7, 0, 0, 0, 0, 0, 0, 0,
-    ]);
-    for _ in 0..(7 + 7 + 2) * 7 {
-        expected_result.push(0);
-    }
-    assert_eq!(
-        pad_seven_pixel(&image, GeneralResolution::new(2, 3)).unwrap(),
-        (
-            expected_result,
-            GeneralResolution::new(7 + 7 + 2, 7 + 7 + 3)
-        )
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use crate::{
-        find_fragments_in_images, fragment_finder::FragmentUse, FragmentFinderData, FragmentFlip,
-        GeneralResolution, NormalizedBytes,
+        find_fragments_in_images,
+        fragment_finder::{pad_seven_pixel, FragmentUse},
+        FragmentFinderData, FragmentFlip, GeneralResolution, NormalizedBytes,
     };
 
     #[test]
@@ -236,6 +214,29 @@ mod tests {
         assert_eq!(
             fragment_usage_ordered[1].0,
             &NormalizedBytes::new(bytes_present_once).0
+        );
+    }
+
+    #[test]
+    fn test_pad_seven_pixel() {
+        let image = [2, 3, 4, 5, 6, 7];
+        let mut expected_result = Vec::new();
+        for _ in 0..(7 + 7 + 2) * 7 {
+            expected_result.push(0);
+        }
+        expected_result.extend([
+            0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7, 0, 0, 0, 0, 0, 0, 0,
+        ]);
+        for _ in 0..(7 + 7 + 2) * 7 {
+            expected_result.push(0);
+        }
+        assert_eq!(
+            pad_seven_pixel(&image, GeneralResolution::new(2, 3)).unwrap(),
+            (
+                expected_result,
+                GeneralResolution::new(7 + 7 + 2, 7 + 7 + 3)
+            )
         );
     }
 }

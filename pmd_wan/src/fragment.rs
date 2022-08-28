@@ -8,7 +8,7 @@ use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
 /// A [`Fragment`] may reference an [`crate::ImageBytes`], that will form a single (or all if small enought) part of an [`crate::Frame`]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Fragment {
     pub unk1: u16,
     /// Seems to be related to allocation. Each Fragment in the group should increment it from the value of [`FragmentResolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group

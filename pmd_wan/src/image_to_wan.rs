@@ -282,6 +282,7 @@ fn insert_fragment_pos_in_wan_image(
 fn imagebuffer_cut_test() {
     // (image_buffer, x_src, y_src, target_buffer, x_target, y_target, cut_top, cut_bottom, cut_left, cut_right)
     #[rustfmt::skip]
+    #[allow(clippy::type_complexity)]
     let tests_to_perform: [(Vec<u8>, u16, u16, Vec<u8>, u16, u16, usize, usize, usize, usize); 2] = [
         (
             vec![

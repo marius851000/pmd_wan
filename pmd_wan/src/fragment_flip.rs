@@ -4,13 +4,11 @@ use crate::FragmentResolution;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum FragmentFlipError {
-    #[error("Non square resolution")]
-    NonSquareResolution,
     #[error("Incoherent resolution")]
     IncoherentResolution,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
 pub enum FragmentFlip {
     Standard,
     FlipHorizontal,
@@ -80,8 +78,7 @@ impl FragmentFlip {
             (Self::FlipBoth, Self::FlipHorizontal) => Self::FlipVertical,
             (Self::FlipBoth, Self::FlipVertical) => Self::FlipHorizontal,
             (Self::FlipHorizontal, Self::FlipBoth) => Self::FlipVertical,
-            (Self::FlipVertical, Self::FlipBoth) => Self::FlipHorizontal
-            
+            (Self::FlipVertical, Self::FlipBoth) => Self::FlipHorizontal,
         }
     }
 

@@ -53,15 +53,20 @@ mod fragment_flip;
 pub use fragment_flip::{FragmentFlip, FragmentFlipError};
 
 mod fragment_finder;
-pub use fragment_finder::{find_fragments_in_images, FragmentFinderData, FragmentFinderError};
+pub use fragment_finder::{
+    find_fragments_in_images, pad_seven_pixel, FragmentFinderData, FragmentFinderError,
+};
 
 mod image_to_wan;
 pub use image_to_wan::insert_fragment_in_wanimage;
 
 pub mod image_tool;
 
+mod multi_images_to_wan;
+pub use multi_images_to_wan::create_wan_from_multiple_images;
+
 mod normalized_bytes;
-pub use normalized_bytes::NormalizedBytes;
+pub use normalized_bytes::{NormalizedBytes, VariableNormalizedBytes};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct GeneralResolution {
