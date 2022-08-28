@@ -67,7 +67,6 @@ pub struct ImageBytes {
 }
 
 impl ImageBytes {
-    #[allow(clippy::read_zero_byte_vec)] // seemingly false positive
     pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<ImageBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;

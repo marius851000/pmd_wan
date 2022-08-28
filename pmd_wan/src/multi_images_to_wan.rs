@@ -84,7 +84,7 @@ fn get_images_delta(images: &[(&[u8], GeneralResolution)]) -> anyhow::Result<Vec
     let mut result = Vec::new();
     for (image_id, _image) in images.iter().enumerate() {
         fn find_most_used_tile(
-            ordered: &Vec<(&NormalizedBytes, &Vec<FragmentUse>)>,
+            ordered: &[(&NormalizedBytes, &Vec<FragmentUse>)],
             image_id: u16,
             limit: bool,
         ) -> Option<(NormalizedBytes, FragmentUse)> {

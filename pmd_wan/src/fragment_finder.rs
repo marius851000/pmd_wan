@@ -220,17 +220,12 @@ mod tests {
     #[test]
     fn test_pad_seven_pixel() {
         let image = [2, 3, 4, 5, 6, 7];
-        let mut expected_result = Vec::new();
-        for _ in 0..(7 + 7 + 2) * 7 {
-            expected_result.push(0);
-        }
+        let mut expected_result = vec![0; (7 + 7 + 2) * 7];
         expected_result.extend([
             0, 0, 0, 0, 0, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7, 0, 0, 0, 0, 0, 0, 0,
         ]);
-        for _ in 0..(7 + 7 + 2) * 7 {
-            expected_result.push(0);
-        }
+        expected_result.resize(expected_result.len() + (7 + 7 + 2) * 7, 0);
         assert_eq!(
             pad_seven_pixel(&image, GeneralResolution::new(2, 3)).unwrap(),
             (
