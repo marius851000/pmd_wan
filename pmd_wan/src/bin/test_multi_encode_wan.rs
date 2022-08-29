@@ -4,7 +4,7 @@ use image::GenericImageView;
 use pmd_wan::{
     create_wan_from_multiple_images,
     image_tool::{image_to_paletted_bytes, ImageToPaletteBytesData},
-    GeneralResolution, SpriteType,
+    GeneralResolution, SpriteType, AnimationFrame, Animation,
 };
 
 const TILE_WIDTH: u32 = 82;
@@ -45,6 +45,22 @@ pub fn main() {
         ));
     }
 
-    let mut wan_image = create_wan_from_multiple_images(&images, SpriteType::Chara).unwrap();
+    let mut wan_image = create_wan_from_multiple_images(&images, SpriteType::PropsUI).unwrap();
     wan_image.palette.palette = palette_data.ordered.clone();
+
+    let mut animation_frames = Vec::new();
+    for frame_id in 0..wan_image.frames.frames.len() {
+        animation_frames.push(
+            AnimationFrame { duration: 0, flag: 0, frame_id: frame_id as u16, offset_x: 0, offset_y: 0, shadow_offset_x: 0, shadow_offset_y: 0 }
+        )
+    }
+    
+    wan_image.anim_store.anim_groups = vec![vec![
+        Animation {
+            frames: animation_frames
+        }
+    ]];
+
+    let mut out = File::create("./test_reshiram.wan").unwrap();
+    wan_image.create_wan(&mut out).unwrap();
 }
