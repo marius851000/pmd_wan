@@ -4,6 +4,7 @@ use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug, Default)]
+/// A palette, composed of group of 16 color when the first is transparent. Colors are RGBA.
 pub struct Palette {
     pub palette: Vec<[u8; 4]>,
 }

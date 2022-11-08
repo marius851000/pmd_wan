@@ -41,7 +41,7 @@ pub fn create_wan_from_multiple_images(
     //1. Get fragments usage stats
     //2. For each images, get the most used fragment with at least 75% of non-null surface covered. If none are found, remove the 75% requirement. Otherwise, this a fully transparent frame.
     //3. Tile the other fragments
-    //4. TBD. Optimise the allocation by putting together fragments to form bigger fragment
+    //4. Optimise the allocation by putting together fragments to form bigger fragment
     //5. Assemble all of this
     if images.len() >= u16::MAX as usize {
         bail!(
@@ -74,6 +74,8 @@ pub fn create_wan_from_multiple_images(
 
     // step 4 and 5 are combined
     bigger_fragment_finder.find_and_apply_on_wan(&mut wan);
+
+    wan.fix_empty_frames();
     Ok(wan)
 }
 
@@ -297,7 +299,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             // add the bytes
             let image_id = s.wan.image_store.len();
             s.wan.image_store.images.push(ImageBytes {
-                mixed_pixels: encode_fragment_pixels(&bytes.0, &FragmentResolution::new(8, 8))
+                mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
                     .unwrap(),
                 z_index: 0,
             });
@@ -437,7 +439,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     self.wan.image_store.images.push(ImageBytes {
                         mixed_pixels: encode_fragment_pixels(
                             &base_bigger_fragment.unwrap().0,
-                            &resolution,
+                            resolution,
                         )
                         .unwrap(),
                         z_index: 0,

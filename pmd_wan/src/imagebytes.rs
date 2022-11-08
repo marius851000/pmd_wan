@@ -284,7 +284,7 @@ pub fn decode_fragment_pixels(
 
 pub fn encode_fragment_pixels(
     pixels: &[u8],
-    resolution: &FragmentResolution,
+    resolution: FragmentResolution,
 ) -> anyhow::Result<Vec<u8>> {
     if resolution.x % 8 != 0 || resolution.y % 8 != 0 {
         bail!(

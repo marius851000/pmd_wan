@@ -35,7 +35,7 @@ impl Fragment {
         file: &mut F,
         previous_image: Option<usize>,
     ) -> Result<(Fragment, bool), WanError> {
-        trace!("parsing a meta-frame");
+        trace!("parsing a fragment");
         let image_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
                 None => return Err(WanError::ImageIDPointBackButFirstImage),
@@ -60,7 +60,7 @@ impl Fragment {
         let is_mosaic = get_bit_u16(offset_y_data, 3).unwrap(); //no panic: always return if indice less than 16
         let unk3 = get_bit_u16(offset_y_data, 7).unwrap();
         let unk4 = get_bit_u16(offset_y_data, 6).unwrap();
-        let offset_y = (offset_y_data & 0x00FF) as i8; //range: 0-255 (integer)
+        let offset_y = (offset_y_data & 0x00FF) as i8; //range: 0-255 (integer) //TODO: shouldn’t that be u8?
 
         #[allow(clippy::collapsible_else_if)]
         let unk3_4 = if offset_y < 0 {
@@ -121,6 +121,7 @@ impl Fragment {
         previous_image: Option<usize>,
         is_last: bool,
     ) -> anyhow::Result<()> {
+        //TODO: use try_into, or maybe even directly i16
         let image_index: i16 = match previous_image {
             None => self.image_index as i16,
             Some(value) => {

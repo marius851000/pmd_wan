@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::{bail, Context};
 
 use crate::{Fragment, WanError};
 use std::io::{Read, Write};
@@ -17,7 +17,7 @@ impl Frame {
             let (meta_frame, is_last) = Fragment::new_from_bytes(file, previous_image)?;
             previous_image = Some(meta_frame.image_index);
             fragments.push(meta_frame);
-            trace!("it's data: {:?}", fragments[fragments.len() - 1]);
+            trace!("its data: {:?}", fragments[fragments.len() - 1]);
             if is_last {
                 break;
             }
@@ -27,11 +27,18 @@ impl Frame {
 
     pub fn write<F: Write>(&self, file: &mut F) -> anyhow::Result<()> {
         let mut previous_image: Option<usize> = None;
-        for (mf_nb, meta_frame) in self.fragments.iter().enumerate() {
-            meta_frame
-                .write(file, previous_image, mf_nb + 1 == self.fragments.len())
-                .with_context(move || format!("Can't write the meta_frame {:?}", meta_frame))?;
-            previous_image = Some(meta_frame.image_index);
+        if self.fragments.is_empty() {
+            bail!("A frame has no fragment, which can’t be encoded.");
+        }
+        for (fragment_nb, fragment) in self.fragments.iter().enumerate() {
+            fragment
+                .write(
+                    file,
+                    previous_image,
+                    fragment_nb + 1 == self.fragments.len(),
+                )
+                .with_context(move || format!("Can't write the fragment {:?}", fragment))?;
+            previous_image = Some(fragment.image_index);
         }
         Ok(())
     }

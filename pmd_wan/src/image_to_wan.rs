@@ -244,7 +244,7 @@ fn insert_fragment_pos_in_wan_image(
 
             let image_bytes_id = wanimage.image_store.images.len();
             wanimage.image_store.images.push(ImageBytes {
-                mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), &fragment_size)
+                mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
                     .context("failed to encode the input byte. This is an internal error")?,
                 z_index: 1,
             });

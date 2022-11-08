@@ -1,4 +1,7 @@
-use crate::{wan_read_raw_4, AnimStore, Fragment, ImageBytesToImageError};
+use crate::{
+    encode_fragment_pixels, wan_read_raw_4, AnimStore, Fragment, FragmentFlip, FragmentResolution,
+    Frame, ImageBytes, ImageBytesToImageError,
+};
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
 use anyhow::Context;
@@ -414,5 +417,39 @@ impl WanImage {
         };
 
         image_bytes.get_image(&self.palette, &fragment.resolution, fragment.pal_idx)
+    }
+
+    pub fn fix_empty_frames(&mut self) {
+        let collected: Vec<&mut Frame> = self
+            .frames
+            .frames
+            .iter_mut()
+            .filter(|x| (*x).fragments.is_empty())
+            .collect();
+        if collected.is_empty() {
+            return;
+        }
+        let image_index = self.image_store.images.len();
+        let resolution = FragmentResolution { x: 8, y: 8 };
+        self.image_store.images.push(ImageBytes {
+            // no panic: We guarantee input parameters are valid
+            mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
+            z_index: 0,
+        });
+        for empty_frame in collected {
+            empty_frame.fragments.push(Fragment {
+                unk1: 0,
+                image_alloc_counter: 0,
+                unk3_4: None,
+                unk5: false,
+                image_index,
+                offset_y: 0,
+                offset_x: 0,
+                flip: FragmentFlip::Standard,
+                is_mosaic: false,
+                pal_idx: 0,
+                resolution,
+            })
+        }
     }
 }
