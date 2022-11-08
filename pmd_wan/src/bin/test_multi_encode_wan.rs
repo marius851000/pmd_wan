@@ -4,7 +4,7 @@ use image::GenericImageView;
 use pmd_wan::{
     create_wan_from_multiple_images,
     image_tool::{image_to_paletted_bytes, ImageToPaletteBytesData},
-    GeneralResolution, SpriteType, AnimationFrame, Animation,
+    GeneralResolution, SpriteType, AnimationFrame, Animation, WanImage,
 };
 
 const TILE_WIDTH: u32 = 82;
@@ -61,6 +61,13 @@ pub fn main() {
         }
     ]];
 
+    {
     let mut out = File::create("./test_reshiram.wan").unwrap();
     wan_image.create_wan(&mut out).unwrap();
+    }
+
+    {
+        let result_file = File::open("./test_reshiram.wan").unwrap();
+        let _result = WanImage::decode_wan(result_file).unwrap();
+    }
 }
