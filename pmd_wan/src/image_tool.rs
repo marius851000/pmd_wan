@@ -23,7 +23,7 @@ impl ImageToPaletteBytesData {
         if let Some(value) = self.map.get(&color.0) {
             return Some(*value);
         };
-        let number = match (self.map.len() + 1).try_into() {
+        let number = match self.map.len().try_into() {
             Err(_) => return None,
             Ok(nb) => nb,
         };
