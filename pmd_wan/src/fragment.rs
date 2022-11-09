@@ -174,8 +174,8 @@ impl Fragment {
         let (v_flip, h_flip) = self.flip.to_bools();
 
         let offset_x_data: u16 = ((size_indice_x as u16) << (8 + 6))
-            + ((v_flip as u16) << (8 + 5))
-            + ((h_flip as u16) << (8 + 4))
+            + ((h_flip as u16) << (8 + 5))
+            + ((v_flip as u16) << (8 + 4))
             + ((is_last as u16) << (8 + 3))
             + ((self.unk5 as u16) << (8 + 2))
             + (((written_offset_x) as u16) & 0x01FF);
