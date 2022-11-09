@@ -338,11 +338,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         let nb_chunk_x = resolution.x / 8;
         let nb_chunk_y = resolution.y / 8;
 
-        let min_filled_chunk = if nb_chunk_x * nb_chunk_y == 2 {
-            2
-        } else {
-            nb_chunk_x * nb_chunk_y - 1
-        };
+        let max_unused_chunk = if nb_chunk_x * nb_chunk_y <= 2 { 0 } else { 1 };
 
         let mut normal_chunk_line = vec![vec![0; 64]; nb_chunk_x as usize];
         let mut bigger_fragment: Vec<u8> = Vec::with_capacity(resolution.nb_pixels() as usize);
@@ -365,12 +361,15 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     let mut all_big_fragment: Vec<(FragmentPosition, FragmentFlip)> = Vec::new();
                     let mut used_fragments: HashMap<NormalizedBytes, BTreeSet<FragmentUse>> =
                         HashMap::new();
-                    let mut number_containing_chunk = 0;
+                    let mut nb_unused_chunk = 0;
                     // let’s check one possible placement
                     for usage in self.group.get(&possible_fragment).unwrap() {
                         bigger_fragment.clear();
                         for small_fragment_line in 0..nb_chunk_y {
                             for small_fragment_row in 0..nb_chunk_x {
+                                if nb_unused_chunk > max_unused_chunk {
+                                    continue 'skip_fragment_positon;
+                                }
                                 let target_fragment_position = FragmentPosition {
                                     x: usage.x + relative_start_x + small_fragment_row as i32 * 8,
                                     y: usage.y + relative_start_y + small_fragment_line as i32 * 8,
@@ -389,9 +388,9 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                                         .entry(*norm_bytes)
                                         .or_insert_with(BTreeSet::new)
                                         .insert(target_fragment_position.to_fragment_use(*flip));
-                                    number_containing_chunk += 1;
                                 } else {
                                     normal_chunk_line[small_fragment_row as usize] = vec![0; 64];
+                                    nb_unused_chunk += 1;
                                 }
                             }
                             for inner_line in 0..8 {
@@ -401,10 +400,6 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                                     );
                                 }
                             }
-                        }
-
-                        if number_containing_chunk < min_filled_chunk {
-                            continue 'skip_fragment_positon;
                         }
 
                         let (normalized_bigger_fragment, bigger_flip) =
