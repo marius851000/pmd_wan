@@ -306,11 +306,11 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             // and their usage
             for usage in use_of_this_byte {
                 let frame = &mut s.wan.frames.frames[usage.image_id as usize];
-                let previous_image_alloc_counter = if !frame.fragments.is_empty() {
-                    frame.fragments[frame.fragments.len() - 1].image_alloc_counter
-                } else {
-                    0
-                };
+                let previous_image_alloc_counter = frame
+                    .fragments
+                    .last()
+                    .map(|x| x.image_alloc_counter)
+                    .unwrap_or(0);
                 frame.fragments.push(Fragment {
                     unk1: 0,
                     image_alloc_counter: previous_image_alloc_counter + 1,
@@ -341,7 +341,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         let min_filled_chunk = if nb_chunk_x * nb_chunk_y == 2 {
             2
         } else {
-            (nb_chunk_x * nb_chunk_y) / 2 + 1
+            nb_chunk_x * nb_chunk_y - 1
         };
 
         let mut normal_chunk_line = vec![vec![0; 64]; nb_chunk_x as usize];
@@ -447,11 +447,11 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     // and their usage
                     for (position, flip) in all_big_fragment {
                         let frame = &self.wan.frames.frames[position.image_id as usize];
-                        let previous_image_alloc_counter = if !frame.fragments.is_empty() {
-                            frame.fragments[frame.fragments.len() - 1].image_alloc_counter
-                        } else {
-                            0
-                        };
+                        let previous_image_alloc_counter = frame
+                            .fragments
+                            .last()
+                            .map(|x| x.image_alloc_counter)
+                            .unwrap_or(0);
                         self.wan.frames.frames[position.image_id as usize]
                             .fragments
                             .push(Fragment {
