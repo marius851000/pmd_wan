@@ -16,7 +16,7 @@ pub struct Fragment {
     /// otherwise the two boolean in the tuple will be used
     pub unk3_4: Option<(bool, bool)>,
     pub unk5: bool, // maybe is "invert palette color"
-    pub image_index: usize,
+    pub image_bytes_index: usize,
     pub offset_y: i8,
     pub offset_x: i16,
     pub flip: FragmentFlip,
@@ -33,7 +33,7 @@ impl Fragment {
         previous_image: Option<usize>,
     ) -> Result<(Fragment, bool), WanError> {
         trace!("parsing a fragment");
-        let image_index = match file.read_i16::<LE>()? {
+        let image_bytes_index = match file.read_i16::<LE>()? {
             -1 => match previous_image {
                 None => return Err(WanError::ImageIDPointBackButFirstImage),
                 Some(value) => value,
@@ -91,7 +91,7 @@ impl Fragment {
                 unk1,
                 unk3_4,
                 unk5,
-                image_index,
+                image_bytes_index,
                 offset_x,
                 offset_y,
                 flip,
@@ -114,19 +114,18 @@ impl Fragment {
     pub fn write<F: Write>(
         &self,
         file: &mut F,
-        previous_image: Option<usize>,
+        previous_image_bytes: Option<usize>,
         is_last: bool,
         image_alloc_counter: u16,
     ) -> anyhow::Result<()> {
-
         //TODO: use try_into, or maybe even directly i16
-        let image_index: i16 = match previous_image {
-            None => self.image_index as i16,
+        let image_index: i16 = match previous_image_bytes {
+            None => self.image_bytes_index as i16,
             Some(value) => {
-                if self.image_index == value {
+                if self.image_bytes_index == value {
                     -1
                 } else {
-                    self.image_index as i16
+                    self.image_bytes_index as i16
                 }
             }
         };

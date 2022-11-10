@@ -201,7 +201,6 @@ fn insert_fragment_pos_in_wan_image(
     upper_image_y: i32,
 ) -> anyhow::Result<Option<Vec<Fragment>>> {
     let mut fragments = Vec::new();
-    let mut image_alloc_counter = 0;
 
     // Chunk the image into 64x64 group, the max meta frame size
     const MAX_META_FRAME_SIZE: u16 = 64;
@@ -242,7 +241,7 @@ fn insert_fragment_pos_in_wan_image(
             let buffer_to_write =
                 cut_section.get_fragment(0, 0, fragment_size.x as u16, fragment_size.y as u16, 0);
 
-            let image_bytes_id = wanimage.image_store.images.len();
+            let image_bytes_index = wanimage.image_store.images.len();
             wanimage.image_store.images.push(ImageBytes {
                 mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
                     .context("failed to encode the input byte. This is an internal error")?,
@@ -254,7 +253,7 @@ fn insert_fragment_pos_in_wan_image(
                 unk1: 0,
                 unk3_4: None,
                 unk5: false,
-                image_index: image_bytes_id,
+                image_bytes_index,
                 offset_y,
                 offset_x: fragment_x.try_into().context("The image is too high")?,
                 flip: FragmentFlip::Standard,

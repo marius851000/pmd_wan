@@ -294,10 +294,12 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             s.process_resolution(resolution);
         }
 
+        //TODO: execute a second time, for those who don’t have duplicate. May further reduce the file size.
+
         for (bytes, use_of_this_byte) in s.group.into_iter() {
             // TODO: this is mostly copy–pasted from the process_resolution function
             // add the bytes
-            let image_id = s.wan.image_store.len();
+            let image_bytes_index = s.wan.image_store.len();
             s.wan.image_store.images.push(ImageBytes {
                 mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
                     .unwrap(),
@@ -310,7 +312,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     unk1: 0,
                     unk3_4: None,
                     unk5: false,
-                    image_index: image_id,
+                    image_bytes_index,
                     offset_y: usage.y.try_into().unwrap(),
                     offset_x: usage.x.try_into().unwrap(),
                     flip: usage.flip,
@@ -424,7 +426,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     }
                     // Yay, we found a bunch of big fragment we can finally push that to Wan
                     // push the bytes
-                    let image_id = self.wan.image_store.len();
+                    let image_bytes_index = self.wan.image_store.len();
                     self.wan.image_store.images.push(ImageBytes {
                         mixed_pixels: encode_fragment_pixels(
                             &base_bigger_fragment.unwrap().0,
@@ -441,7 +443,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                                 unk1: 0,
                                 unk3_4: None,
                                 unk5: false,
-                                image_index: image_id,
+                                image_bytes_index,
                                 offset_y: position.y.try_into().unwrap(),
                                 offset_x: position.x.try_into().unwrap(),
                                 flip,

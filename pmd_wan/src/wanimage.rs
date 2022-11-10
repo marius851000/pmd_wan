@@ -401,9 +401,13 @@ impl WanImage {
         &self,
         fragment: &Fragment,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
-        let image_bytes = match self.image_store.images.get(fragment.image_index) {
+        let image_bytes = match self.image_store.images.get(fragment.image_bytes_index) {
             Some(b) => b,
-            None => return Err(ImageBytesToImageError::NoImageBytes(fragment.image_index)),
+            None => {
+                return Err(ImageBytesToImageError::NoImageBytes(
+                    fragment.image_bytes_index,
+                ))
+            }
         };
 
         image_bytes.get_image(&self.palette, &fragment.resolution, fragment.pal_idx)
@@ -419,7 +423,7 @@ impl WanImage {
         if collected.is_empty() {
             return;
         }
-        let image_index = self.image_store.images.len();
+        let image_bytes_index = self.image_store.images.len();
         let resolution = FragmentResolution { x: 8, y: 8 };
         self.image_store.images.push(ImageBytes {
             // no panic: We guarantee input parameters are valid
@@ -431,7 +435,7 @@ impl WanImage {
                 unk1: 0,
                 unk3_4: None,
                 unk5: false,
-                image_index,
+                image_bytes_index,
                 offset_y: 0,
                 offset_x: 0,
                 flip: FragmentFlip::Standard,

@@ -14,9 +14,9 @@ impl Frame {
         let mut fragments = Vec::new();
         let mut previous_image = None;
         loop {
-            let (meta_frame, is_last) = Fragment::new_from_bytes(file, previous_image)?;
-            previous_image = Some(meta_frame.image_index);
-            fragments.push(meta_frame);
+            let (fragment, is_last) = Fragment::new_from_bytes(file, previous_image)?;
+            previous_image = Some(fragment.image_bytes_index);
+            fragments.push(fragment);
             trace!("its data: {:?}", fragments[fragments.len() - 1]);
             if is_last {
                 break;
