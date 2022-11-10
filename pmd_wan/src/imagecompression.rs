@@ -4,14 +4,17 @@ use byteorder::WriteBytesExt;
 
 use crate::{imagebytes::ImageAssemblyEntry, ImageBytes, WanError};
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CompressionMethod {
+    /// The compression used to compress creatures in base game
     CompressionMethodOriginal,
+    /// No compression, used for other sprites in base game
+    NoCompression,
+    /// An original optimised compression algorithm (TODO: I think it is unfinished, need testing, or maybe just fuzzing)
     CompressionMethodOptimised {
         multiple_of_value: usize,
         min_transparent_to_compress: usize,
     },
-    NoCompression,
 }
 
 impl CompressionMethod {

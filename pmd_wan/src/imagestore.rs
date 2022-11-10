@@ -1,4 +1,4 @@
-use crate::{ImageBytes, SpriteType, WanError};
+use crate::{CompressionMethod, ImageBytes, WanError};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -46,14 +46,14 @@ impl ImageStore {
     pub fn write<F: Write + Seek>(
         &self,
         file: &mut F,
-        sprite_type: SpriteType,
+        compression: &CompressionMethod,
     ) -> Result<(Vec<u64>, Vec<u64>), WanError> {
         let mut image_offset = vec![];
         let mut sir0_pointer_images = vec![];
 
         for image in &self.images {
             trace!("image wrote at {}", file.seek(SeekFrom::Current(0))?);
-            let (assembly_table_offset, sir0_img_pointer) = image.write(file, sprite_type)?;
+            let (assembly_table_offset, sir0_img_pointer) = image.write(file, compression)?;
             for pointer in sir0_img_pointer {
                 sir0_pointer_images.push(pointer)
             }

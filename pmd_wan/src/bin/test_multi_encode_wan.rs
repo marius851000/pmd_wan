@@ -4,7 +4,7 @@ use image::GenericImageView;
 use pmd_wan::{
     create_wan_from_multiple_images,
     image_tool::{image_to_paletted_bytes, ImageToPaletteBytesData},
-    Animation, AnimationFrame, GeneralResolution, SpriteType, WanImage,
+    Animation, AnimationFrame, CompressionMethod, GeneralResolution, SpriteType, WanImage,
 };
 
 const TILE_WIDTH: u32 = 82;
@@ -64,6 +64,8 @@ pub fn main() {
     wan_image.anim_store.anim_groups = vec![vec![Animation {
         frames: animation_frames,
     }]];
+
+    wan_image.compression = CompressionMethod::CompressionMethodOriginal;
 
     {
         let mut out = File::create("./test_reshiram.wan").unwrap();

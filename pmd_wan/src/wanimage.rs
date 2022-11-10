@@ -1,6 +1,6 @@
 use crate::{
-    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimStore, Fragment, FragmentFlip,
-    FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
+    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimStore, CompressionMethod, Fragment,
+    FragmentFlip, FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
 };
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
@@ -22,6 +22,8 @@ pub struct WanImage {
     pub is_256_color: bool,
     pub sprite_type: SpriteType,
     pub unk2: u16,
+    /// How the imagebytes should be compressed
+    pub compression: CompressionMethod,
 }
 
 impl WanImage {
@@ -36,6 +38,7 @@ impl WanImage {
             is_256_color: false,
             sprite_type,
             unk2: 0,
+            compression: sprite_type.default_compression_method(),
         }
     }
 
@@ -191,6 +194,7 @@ impl WanImage {
             is_256_color,
             sprite_type,
             unk2,
+            compression: sprite_type.default_compression_method(),
         })
     }
 
@@ -250,7 +254,8 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
 
-        let (image_offset, sir0_pointer_images) = self.image_store.write(file, self.sprite_type)?;
+        let (image_offset, sir0_pointer_images) =
+            self.image_store.write(file, &self.compression)?;
 
         for pointer in sir0_pointer_images {
             sir0_offsets.push(pointer as u32);
