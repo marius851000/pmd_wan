@@ -1,12 +1,12 @@
 use crate::{
-    encode_fragment_pixels, wan_read_raw_4, AnimStore, Fragment, FragmentFlip, FragmentResolution,
-    Frame, ImageBytes, ImageBytesToImageError,
+    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimStore, Fragment, FragmentFlip,
+    FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
 };
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
 use anyhow::Context;
 use binwrite::BinWrite;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use image::{ImageBuffer, Rgba};
 use pmd_sir0::write_sir0_footer;
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -215,6 +215,7 @@ impl WanImage {
     }
 
     pub fn create_wan<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<()> {
+        let opt_le = get_opt_le();
         debug!("start creating a wan image");
 
         let mut sir0_offsets: Vec<u32> = vec![];
@@ -229,10 +230,7 @@ impl WanImage {
         let sir0_pointer_offset = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(sir0_pointer_offset as u32);
 
-        (
-            0u32, 0u32, //magic
-        )
-            .write(file)?;
+        file.write_all(&[0; 8])?; //magic
 
         // write meta-frame
         trace!(
@@ -278,7 +276,7 @@ impl WanImage {
         let fragment_reference_offset = file.seek(SeekFrom::Current(0))?;
         for reference in fragments_references {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-            reference.write(file)?;
+            file.write_u32::<LE>(reference)?;
         }
 
         let particule_offset = if !self.raw_particule_table.is_empty() {
@@ -315,7 +313,7 @@ impl WanImage {
         );
         for offset in image_offset {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-            (offset as u32).write(file)?;
+            file.write_u32::<LE>(offset as u32)?;
         }
 
         // animation header
@@ -325,19 +323,19 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        (fragment_reference_offset as u32).write(file)?;
+        file.write_u32::<LE>(fragment_reference_offset as u32)?;
 
         if let Some(particule_offset) = particule_offset {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-            (particule_offset as u32).write(file)?;
+            file.write_u32::<LE>(particule_offset as u32)?;
         } else {
-            0u32.write(file)?;
+            file.write_all(&[0; 4])?;
         }
 
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        (animation_group_reference_offset as u32).write(file)?;
+        file.write_u32::<LE>(animation_group_reference_offset as u32)?;
 
-        (self.anim_store.anim_groups.len() as u16).write(file)?;
+        file.write_u16::<LE>(self.anim_store.anim_groups.len() as u16)?;
 
         let size_to_allocate_for_max_metaframe =
             if let Some(v) = self.size_to_allocate_for_max_metaframe {
@@ -345,7 +343,8 @@ impl WanImage {
             } else {
                 self.frames.generate_size_to_allocate_for_max_metaframe()
             };
-        (size_to_allocate_for_max_metaframe, 0u32, 0u16).write(file)?;
+        file.write_u32::<LE>(size_to_allocate_for_max_metaframe)?;
+        file.write_all(&[0; 6])?;
 
         // images header
         trace!(
@@ -354,7 +353,7 @@ impl WanImage {
         );
         let image_info_offset = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        (pointer_image_data_pointer_table as u32).write(file)?;
+        file.write_u32::<LE>(pointer_image_data_pointer_table as u32)?;
 
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
         (
@@ -364,16 +363,17 @@ impl WanImage {
             self.unk2,
             self.image_store.len() as u16,
         )
-            .write(file)?;
+            .write_options(file, &opt_le)?;
 
         // wan header
         let wan_header_pos = file.seek(SeekFrom::Current(0))?;
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        (animation_info_offset as u32).write(file)?;
+        file.write_u32::<LE>(animation_info_offset as u32)?;
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        (image_info_offset as u32, self.sprite_type.get_id() as u16).write(file)?;
+        file.write_u32::<LE>(image_info_offset as u32)?;
+        file.write_u16::<LE>(self.sprite_type.get_id() as u16)?;
 
-        0u16.write(file)?;
+        file.write_all(&[0, 0])?;
 
         while file.seek(SeekFrom::Current(0))? % 16 != 0 {
             file.write_all(&[0xAA])?;
@@ -396,10 +396,10 @@ impl WanImage {
 
         // write the sir0 header
         file.seek(SeekFrom::Start(sir0_pointer_header))?;
-        (wan_header_pos as u32).write(file)?;
+        file.write_u32::<LE>(wan_header_pos as u32)?;
 
         file.seek(SeekFrom::Start(sir0_pointer_offset))?;
-        (sir0_offset_pos as u32).write(file)?;
+        file.write_u32::<LE>(sir0_offset_pos as u32)?;
 
         file.seek(SeekFrom::Start(0))?;
         Ok(())

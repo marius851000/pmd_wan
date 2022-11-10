@@ -5,6 +5,7 @@ extern crate log;
 pub mod tests;
 
 pub mod wanimage;
+use binwrite::WriterOption;
 pub use wanimage::WanImage;
 
 mod wanerror;
@@ -67,6 +68,10 @@ pub use multi_images_to_wan::create_wan_from_multiple_images;
 
 mod normalized_bytes;
 pub use normalized_bytes::{NormalizedBytes, VariableNormalizedBytes};
+
+pub fn get_opt_le() -> WriterOption {
+    binwrite::writer_option_new!(endian: binwrite::Endian::Little)
+}
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct GeneralResolution {

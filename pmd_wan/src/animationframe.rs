@@ -1,4 +1,4 @@
-use crate::WanError;
+use crate::{get_opt_le, WanError};
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
@@ -49,7 +49,7 @@ impl AnimationFrame {
             frame.shadow_offset_x,
             frame.shadow_offset_y,
         )
-            .write(file)?;
+            .write_options(file, &get_opt_le())?;
 
         Ok(())
     }

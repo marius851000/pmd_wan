@@ -3,7 +3,7 @@ use crate::FragmentFlip;
 use crate::FragmentResolution;
 use crate::WanError;
 use anyhow::bail;
-use binwrite::BinWrite;
+use byteorder::WriteBytesExt;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
@@ -121,6 +121,7 @@ impl Fragment {
         previous_image: Option<usize>,
         is_last: bool,
     ) -> anyhow::Result<()> {
+
         //TODO: use try_into, or maybe even directly i16
         let image_index: i16 = match previous_image {
             None => self.image_index as i16,
@@ -133,7 +134,8 @@ impl Fragment {
             }
         };
 
-        (image_index, self.unk1).write(file)?;
+        file.write_i16::<LE>(image_index)?;
+        file.write_u16::<LE>(self.unk1)?;
 
         let (size_indice_x, size_indice_y) = match self.resolution.get_indice() {
             Some(r) => r,
@@ -180,12 +182,11 @@ impl Fragment {
             + ((self.unk5 as u16) << (8 + 2))
             + (((written_offset_x) as u16) & 0x01FF);
 
-        (
-            offset_y_data,
-            offset_x_data,
+        file.write_u16::<LE>(offset_y_data)?;
+        file.write_u16::<LE>(offset_x_data)?;
+        file.write_u16::<LE>(
             self.image_alloc_counter & 0x3FF + 0x0C00 + (self.pal_idx & 0xF) << 12,
-        )
-            .write(file)?;
+        )?;
 
         Ok(())
     }

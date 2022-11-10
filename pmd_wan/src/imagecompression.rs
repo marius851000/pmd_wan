@@ -1,6 +1,6 @@
 use std::io::{Seek, SeekFrom, Write};
 
-use binwrite::BinWrite;
+use byteorder::WriteBytesExt;
 
 use crate::{imagebytes::ImageAssemblyEntry, ImageBytes, WanError};
 
@@ -94,8 +94,9 @@ impl CompressionMethod {
                     let pos_before_area = file.seek(SeekFrom::Current(0))?;
                     if !is_all_black {
                         for byte_id in 0..32 {
-                            (((this_area[byte_id * 2] << 4) + this_area[byte_id * 2 + 1]) as u8)
-                                .write(file)?;
+                            file.write_u8(
+                                (this_area[byte_id * 2] << 4) + this_area[byte_id * 2 + 1],
+                            )?;
                         }
                     }
 
@@ -194,7 +195,7 @@ impl CompressionMethod {
                     };
                     debug_assert!(pixel_list[pixel_id] < 16);
                     debug_assert!(pixel_list[pixel_id + 1] < 16);
-                    (((pixel_list[pixel_id] << 4) + pixel_list[pixel_id + 1]) as u8).write(file)?;
+                    file.write_u8(((pixel_list[pixel_id] << 4) + pixel_list[pixel_id + 1]) as u8)?;
                     pixel_id += 2;
                     number_of_byte_to_include += 1;
                 }
@@ -211,7 +212,7 @@ impl CompressionMethod {
                 let mut byte_len = 0;
                 let start_offset = file.seek(SeekFrom::Current(0))?;
                 for pixels in pixel_list.chunks_exact(2) {
-                    ((pixels[0] << 4) + pixels[1]).write(file)?;
+                    file.write_u8((pixels[0] << 4) + pixels[1])?;
                     byte_len += 1;
                 }
                 assembly_table.push(ImageAssemblyEntry {

@@ -1,6 +1,5 @@
 use crate::{Animation, WanError};
-use binwrite::BinWrite;
-use byteorder::{ReadBytesExt, LE};
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(Debug)]
@@ -167,7 +166,7 @@ impl AnimStore {
                     lenght: 0,
                 });
                 if good_anim_group_meet {
-                    0u32.write(file)?;
+                    file.write_all(&[0; 4])?;
                 }
             } else {
                 good_anim_group_meet = true;
@@ -177,7 +176,7 @@ impl AnimStore {
                 });
                 for _ in anim_group {
                     sir0_animation.push(file.seek(SeekFrom::Current(0))?);
-                    (animations_pointer[anim_counter] as u32).write(file)?;
+                    file.write_u32::<LE>(animations_pointer[anim_counter] as u32)?;
                     anim_counter += 1;
                 }
             }
@@ -189,7 +188,8 @@ impl AnimStore {
             if data.pointer != 0 && data.lenght != 0 {
                 sir0_animation.push(file.seek(SeekFrom::Current(0))?);
             }
-            (data.pointer, data.lenght).write(file)?;
+            file.write_u32::<LE>(data.pointer)?;
+            file.write_u32::<LE>(data.lenght)?;
         }
 
         Ok((animation_group_reference_offset, sir0_animation))

@@ -60,14 +60,14 @@ pub fn main() {
             shadow_offset_y: 0,
         })
     }
-    
+
     wan_image.anim_store.anim_groups = vec![vec![Animation {
         frames: animation_frames,
     }]];
 
     {
-    let mut out = File::create("./test_reshiram.wan").unwrap();
-    wan_image.create_wan(&mut out).unwrap();
+        let mut out = File::create("./test_reshiram.wan").unwrap();
+        wan_image.create_wan(&mut out).unwrap();
     }
 
     {
