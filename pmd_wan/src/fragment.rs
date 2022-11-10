@@ -92,7 +92,6 @@ impl Fragment {
         Ok((
             Fragment {
                 unk1,
-                image_alloc_counter: alloc_and_palette & 0x03FF,
                 unk3_4,
                 unk5,
                 image_index,
@@ -120,6 +119,7 @@ impl Fragment {
         file: &mut F,
         previous_image: Option<usize>,
         is_last: bool,
+        image_alloc_counter: u16,
     ) -> anyhow::Result<()> {
 
         //TODO: use try_into, or maybe even directly i16
@@ -185,7 +185,7 @@ impl Fragment {
         file.write_u16::<LE>(offset_y_data)?;
         file.write_u16::<LE>(offset_x_data)?;
         file.write_u16::<LE>(
-            self.image_alloc_counter & 0x3FF + 0x0C00 + (self.pal_idx & 0xF) << 12,
+            ((self.pal_idx & 0xF) << 12) + 0x0C00 + (image_alloc_counter & 0x3FF)
         )?;
 
         Ok(())
