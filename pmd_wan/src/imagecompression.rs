@@ -10,11 +10,11 @@ pub enum CompressionMethod {
     CompressionMethodOriginal,
     /// No compression, used for other sprites in base game
     NoCompression,
-    /// An original optimised compression algorithm (TODO: I think it is unfinished, need testing, or maybe just fuzzing)
+    /* /// An original optimised compression algorithm (TODO: I think it is unfinished, need testing, or maybe just fuzzing)
     CompressionMethodOptimised {
         multiple_of_value: usize,
         min_transparent_to_compress: usize,
-    },
+    },*/
 }
 
 impl CompressionMethod {
@@ -126,7 +126,7 @@ impl CompressionMethod {
                 }
                 assembly_table.push(actual_entry.unwrap().to_assembly())
             }
-            Self::CompressionMethodOptimised {
+            /*Self::CompressionMethodOptimised {
                 multiple_of_value,
                 min_transparent_to_compress,
             } => {
@@ -210,7 +210,7 @@ impl CompressionMethod {
                         _z_index: image.z_index,
                     });
                 };
-            }
+            }*/
             Self::NoCompression => {
                 let mut byte_len = 0;
                 let start_offset = file.seek(SeekFrom::Current(0))?;
