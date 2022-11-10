@@ -86,13 +86,13 @@ impl Fragment {
         let unk5 = get_bit_u16(offset_x_data, 5).unwrap();
         let offset_x = (offset_x_data & 0x01FF) as i16 - 256; //range: 0-511
 
-        let unk2 = file.read_u16::<LE>()?;
-        let pal_idx = ((0xF000 & unk2) >> 12) as u16;
+        let alloc_and_palette = file.read_u16::<LE>()?;
+        let pal_idx = ((0xF000 & alloc_and_palette) >> 12) as u16;
 
         Ok((
             Fragment {
                 unk1,
-                image_alloc_counter: unk2,
+                image_alloc_counter: alloc_and_palette & 0x03FF,
                 unk3_4,
                 unk5,
                 image_index,
@@ -180,7 +180,12 @@ impl Fragment {
             + ((self.unk5 as u16) << (8 + 2))
             + (((written_offset_x) as u16) & 0x01FF);
 
-        (offset_y_data, offset_x_data, self.image_alloc_counter).write(file)?;
+        (
+            offset_y_data,
+            offset_x_data,
+            self.image_alloc_counter & 0x3FF + 0x0C00 + (self.pal_idx & 0xF) << 12,
+        )
+            .write(file)?;
 
         Ok(())
     }
