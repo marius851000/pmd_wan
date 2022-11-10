@@ -11,9 +11,6 @@ use std::io::{Read, Write};
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Fragment {
     pub unk1: u16,
-    /// Seems to be related to allocation. Each Fragment in the group should increment it from the value of [`FragmentResolution::chunk_to_allocate_for_metaframe`], starting at 0 for each group
-    /// This can't be generalised to every sprites
-    pub image_alloc_counter: u16,
     /// Two value with unknown property in the offset y data.
     /// most of the time, the unk3 is equal to offset_y < 0, and unk4 the inverse (will be automatically computed if set to None)
     /// otherwise the two boolean in the tuple will be used
@@ -185,7 +182,7 @@ impl Fragment {
         file.write_u16::<LE>(offset_y_data)?;
         file.write_u16::<LE>(offset_x_data)?;
         file.write_u16::<LE>(
-            ((self.pal_idx & 0xF) << 12) + 0x0C00 + (image_alloc_counter & 0x3FF)
+            ((self.pal_idx & 0xF) << 12) + 0x0C00 + (image_alloc_counter & 0x3FF),
         )?;
 
         Ok(())

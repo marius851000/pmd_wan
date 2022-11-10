@@ -21,8 +21,6 @@ pub struct WanImage {
     /// true if the picture have 256 color, false if it only have 16
     pub is_256_color: bool,
     pub sprite_type: SpriteType,
-    /// None automatically calculate it on write (TODO: consider just always calculating it on write)
-    pub size_to_allocate_for_max_metaframe: Option<u32>,
     pub unk2: u16,
 }
 
@@ -37,7 +35,6 @@ impl WanImage {
             raw_particule_table: Vec::new(),
             is_256_color: false,
             sprite_type,
-            size_to_allocate_for_max_metaframe: None,
             unk2: 0,
         }
     }
@@ -93,7 +90,7 @@ impl WanImage {
         }
         let amount_animation_group = file.read_u16::<LE>()?;
 
-        let size_to_allocate_for_max_metaframe = file.read_u32::<LE>()?;
+        let _size_to_allocate_for_max_metaframe = file.read_u32::<LE>()?;
 
         // fourth: decode image data info
         trace!("reading the image data info");
@@ -193,7 +190,6 @@ impl WanImage {
             raw_particule_table,
             is_256_color,
             sprite_type,
-            size_to_allocate_for_max_metaframe: Some(size_to_allocate_for_max_metaframe),
             unk2,
         })
     }
@@ -232,12 +228,12 @@ impl WanImage {
 
         file.write_all(&[0; 8])?; //magic
 
-        // write meta-frame
+        // write frames
         trace!(
-            "start of meta frame reference: {}",
+            "start of frames reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let fragments_references = self.frames.write(file)?;
+        let (fragments_references, size_to_allocate_for_max_frame) = self.frames.write(file)?;
 
         trace!(
             "start of the animation offset: {}",
@@ -337,13 +333,7 @@ impl WanImage {
 
         file.write_u16::<LE>(self.anim_store.anim_groups.len() as u16)?;
 
-        let size_to_allocate_for_max_metaframe =
-            if let Some(v) = self.size_to_allocate_for_max_metaframe {
-                v
-            } else {
-                self.frames.generate_size_to_allocate_for_max_metaframe()
-            };
-        file.write_u32::<LE>(size_to_allocate_for_max_metaframe)?;
+        file.write_u32::<LE>(size_to_allocate_for_max_frame as u32)?;
         file.write_all(&[0; 6])?;
 
         // images header
@@ -439,7 +429,6 @@ impl WanImage {
         for empty_frame in collected {
             empty_frame.fragments.push(Fragment {
                 unk1: 0,
-                image_alloc_counter: 0,
                 unk3_4: None,
                 unk5: false,
                 image_index,

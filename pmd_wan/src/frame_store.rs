@@ -53,24 +53,19 @@ impl FrameStore {
         })
     }
 
-    pub fn write<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<Vec<u32>> {
-        let mut meta_frame_references = vec![];
+    //Return: (List of offset to the encoded frames, max allocation size for a frame)
+    pub fn write<F: Write + Seek>(&self, file: &mut F) -> anyhow::Result<(Vec<u32>, u16)> {
+        let mut frame_references = vec![];
+        let mut size_to_allocate = 0;
 
-        for meta_frame_group in &self.frames {
-            meta_frame_references.push(file.seek(SeekFrom::Current(0))? as u32);
-            meta_frame_group.write(file).with_context(move || {
-                format!("can't write the meta frame group {:?}", meta_frame_group)
-            })?;
+        for frame in &self.frames {
+            frame_references.push(file.seek(SeekFrom::Current(0))? as u32);
+            let local_size_to_allocate = frame
+                .write(file)
+                .with_context(move || format!("can't write the meta frame group {:?}", frame))?;
+            size_to_allocate = size_to_allocate.max(local_size_to_allocate);
         }
 
-        Ok(meta_frame_references)
-    }
-
-    pub fn generate_size_to_allocate_for_max_metaframe(&self) -> u32 {
-        self.frames
-            .iter()
-            .map(|frame| frame.generate_size_to_allocate_for_max_metaframe())
-            .max()
-            .unwrap_or(0)
+        Ok((frame_references, size_to_allocate))
     }
 }

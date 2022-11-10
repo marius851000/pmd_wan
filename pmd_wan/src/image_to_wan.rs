@@ -252,7 +252,6 @@ fn insert_fragment_pos_in_wan_image(
             let offset_y = fragment_y.try_into().context("The image is too large")?;
             fragments.push(Fragment {
                 unk1: 0,
-                image_alloc_counter,
                 unk3_4: None,
                 unk5: false,
                 image_index: image_bytes_id,
@@ -263,17 +262,12 @@ fn insert_fragment_pos_in_wan_image(
                 pal_idx: pal_id,
                 resolution: fragment_size,
             });
-            image_alloc_counter += fragment_size.chunk_to_allocate_for_metaframe();
         }
     }
 
     if fragments.is_empty() {
         return Ok(None);
     }
-
-    wanimage
-        .size_to_allocate_for_max_metaframe
-        .map(|current| current.max(image_alloc_counter as u32));
 
     Ok(Some(fragments))
 }

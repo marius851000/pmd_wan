@@ -306,14 +306,8 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             // and their usage
             for usage in use_of_this_byte {
                 let frame = &mut s.wan.frames.frames[usage.image_id as usize];
-                let previous_image_alloc_counter = frame
-                    .fragments
-                    .last()
-                    .map(|x| x.image_alloc_counter)
-                    .unwrap_or(0);
                 frame.fragments.push(Fragment {
                     unk1: 0,
-                    image_alloc_counter: previous_image_alloc_counter + 1,
                     unk3_4: None,
                     unk5: false,
                     image_index: image_id,
@@ -441,18 +435,10 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     });
                     // and their usage
                     for (position, flip) in all_big_fragment {
-                        let frame = &self.wan.frames.frames[position.image_id as usize];
-                        let previous_image_alloc_counter = frame
-                            .fragments
-                            .last()
-                            .map(|x| x.image_alloc_counter)
-                            .unwrap_or(0);
                         self.wan.frames.frames[position.image_id as usize]
                             .fragments
                             .push(Fragment {
                                 unk1: 0,
-                                image_alloc_counter: previous_image_alloc_counter
-                                    + resolution.chunk_to_allocate_for_metaframe(),
                                 unk3_4: None,
                                 unk5: false,
                                 image_index: image_id,

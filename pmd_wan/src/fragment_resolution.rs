@@ -49,9 +49,11 @@ impl FragmentResolution {
         None
     }
 
-    pub fn chunk_to_allocate_for_metaframe(&self) -> u16 {
+    pub fn chunk_to_allocate_for_fragment(&self) -> u16 {
         // extrapolated from the game. Might be invalid.
-        (self.x.saturating_sub(1) / 16 + 1) as u16 * (self.y.saturating_sub(1) / 16 + 1) as u16
+        let base_result =
+            (self.x.saturating_sub(1) / 16 + 1) as u16 * (self.y.saturating_sub(1) / 16 + 1) as u16;
+        base_result
     }
 
     pub fn can_contain(self, other: Self) -> bool {
@@ -68,7 +70,7 @@ impl FragmentResolution {
         for entry in &VALID_SIZE_AND_INDICE {
             let resolution_entry = FragmentResolution::new(entry.0[0], entry.0[1]);
             if resolution_entry.can_contain(target_resolution) {
-                let chunk_to_allocate_entry = resolution_entry.chunk_to_allocate_for_metaframe();
+                let chunk_to_allocate_entry = resolution_entry.chunk_to_allocate_for_fragment();
                 let pixel_nb_entry = (resolution_entry.x as u16) * (resolution_entry.y as u16);
                 if let Some((chunk_to_allocate_optimal, pixel_nb_optimal, _)) = &optimal_result {
                     if *chunk_to_allocate_optimal > chunk_to_allocate_entry
@@ -105,7 +107,7 @@ mod tests {
                 x: *input_x,
                 y: *input_y,
             };
-            let got = resolution.chunk_to_allocate_for_metaframe();
+            let got = resolution.chunk_to_allocate_for_fragment();
             if got != *expected_output {
                 panic!(
                     "The resolution {:?} return the allocation number {}, but {} were expected",

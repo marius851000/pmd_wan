@@ -25,31 +25,25 @@ impl Frame {
         Ok(Frame { fragments })
     }
 
-    pub fn write<F: Write>(&self, file: &mut F) -> anyhow::Result<()> {
-        let mut previous_image: Option<usize> = None;
+    /// Returns: size to allocate for this image
+    pub fn write<F: Write>(&self, file: &mut F) -> anyhow::Result<u16> {
+        let mut previous_image_bytes: Option<usize> = None;
         if self.fragments.is_empty() {
             bail!("A frame has no fragment, which can’t be encoded.");
         }
+        let mut image_alloc_counter = 0;
         for (fragment_nb, fragment) in self.fragments.iter().enumerate() {
             fragment
                 .write(
                     file,
-                    previous_image,
+                    previous_image_bytes,
                     fragment_nb + 1 == self.fragments.len(),
+                    image_alloc_counter,
                 )
                 .with_context(move || format!("Can't write the fragment {:?}", fragment))?;
-            previous_image = Some(fragment.image_index);
+            image_alloc_counter += fragment.resolution.chunk_to_allocate_for_fragment();
+            previous_image_bytes = Some(fragment.image_bytes_index);
         }
-        Ok(())
-    }
-
-    pub fn generate_size_to_allocate_for_max_metaframe(&self) -> u32 {
-        self.fragments
-            .iter()
-            .map(|x| {
-                x.image_alloc_counter as u32 + x.resolution.chunk_to_allocate_for_metaframe() as u32
-            })
-            .max()
-            .unwrap_or(0)
+        Ok(image_alloc_counter)
     }
 }
