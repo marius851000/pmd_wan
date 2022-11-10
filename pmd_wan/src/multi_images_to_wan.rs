@@ -367,9 +367,6 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                         bigger_fragment.clear();
                         for small_fragment_line in 0..nb_chunk_y {
                             for small_fragment_row in 0..nb_chunk_x {
-                                if nb_unused_chunk > max_unused_chunk {
-                                    continue 'skip_fragment_positon;
-                                }
                                 let target_fragment_position = FragmentPosition {
                                     x: usage.x + relative_start_x + small_fragment_row as i32 * 8,
                                     y: usage.y + relative_start_y + small_fragment_line as i32 * 8,
@@ -391,6 +388,9 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                                 } else {
                                     normal_chunk_line[small_fragment_row as usize] = vec![0; 64];
                                     nb_unused_chunk += 1;
+                                    if nb_unused_chunk > max_unused_chunk {
+                                        continue 'skip_fragment_positon;
+                                    }
                                 }
                             }
                             for inner_line in 0..8 {
