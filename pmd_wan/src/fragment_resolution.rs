@@ -64,7 +64,7 @@ impl FragmentResolution {
     pub fn find_smaller_containing(
         target_resolution: FragmentResolution,
     ) -> Option<FragmentResolution> {
-        let mut optimal_result: Option<(u16, u16, FragmentResolution)> = None; // first u16 is number of chunk to allocate for the metaframe, second u16 is the number of pixel, third is the optimal resolution right now
+        let mut optimal_result: Option<(u16, u16, FragmentResolution)> = None; // first u16 is number of chunk to allocate for the frame, second u16 is the number of pixel, third is the optimal resolution right now
         for entry in &VALID_SIZE_AND_INDICE {
             let resolution_entry = FragmentResolution::new(entry.0[0], entry.0[1]);
             if resolution_entry.can_contain(target_resolution) {

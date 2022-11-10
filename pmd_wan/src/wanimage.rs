@@ -93,7 +93,7 @@ impl WanImage {
         }
         let amount_animation_group = file.read_u16::<LE>()?;
 
-        let _size_to_allocate_for_max_metaframe = file.read_u32::<LE>()?;
+        let _size_to_allocate_for_max_frame = file.read_u32::<LE>()?;
 
         // fourth: decode image data info
         trace!("reading the image data info");
