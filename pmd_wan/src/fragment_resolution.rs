@@ -51,9 +51,7 @@ impl FragmentResolution {
 
     pub fn chunk_to_allocate_for_fragment(&self) -> u16 {
         // extrapolated from the game. Might be invalid.
-        let base_result =
-            (self.x.saturating_sub(1) / 16 + 1) as u16 * (self.y.saturating_sub(1) / 16 + 1) as u16;
-        base_result
+        (self.x.saturating_sub(1) / 16 + 1) as u16 * (self.y.saturating_sub(1) / 16 + 1) as u16
     }
 
     pub fn can_contain(self, other: Self) -> bool {
