@@ -1,6 +1,6 @@
 use crate::{
-    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod, Fragment,
-    FragmentFlip, FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
+    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
+    Fragment, FragmentFlip, FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
 };
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
@@ -87,6 +87,14 @@ impl WanImage {
         if pointer_particule_offset_table > source_file_lenght {
             return Err(WanError::PostFilePointer("particule offset table"));
         };
+        #[allow(unused_parens)]
+        if (if sprite_type == SpriteType::Chara {
+            pointer_particule_offset_table != 0
+        } else {
+            pointer_particule_offset_table == 0
+        }) {
+            return Err(WanError::ExistenceParticuleOffsetTableForNonChara)
+        };
         let pointer_animation_groups_table = file.read_u32::<LE>()? as u64;
         if pointer_animation_groups_table > source_file_lenght {
             return Err(WanError::PostFilePointer("animation groups table"));
@@ -158,6 +166,7 @@ impl WanImage {
             amount_animation_group,
         )?;
 
+        // decode the particle offset table
         let mut raw_particule_table: Vec<u8>;
         if pointer_particule_offset_table > 0 {
             if particule_table_end > source_file_lenght {

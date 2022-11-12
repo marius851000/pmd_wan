@@ -49,4 +49,6 @@ pub enum WanError {
     PostFilePointer(&'static str),
     #[error("The resolution indices are invalid ({0} and {1})")]
     InvalidResolutionIndice(u8, u8),
+    #[error("There is a reference to a particule offset table while this sprite is not a Chara sprite")]
+    ExistenceParticuleOffsetTableForNonChara,
 }
