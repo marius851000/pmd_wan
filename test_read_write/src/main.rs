@@ -51,21 +51,18 @@ fn test_read_reencode<F: Read + Seek>(
     let reread_wan = match reread_wan {
         Ok(r) => Some(r),
         Err(err) => {
-            println!("the error while reading was {:?}", err);
+            println!("the error while re–reading was {:?}", err);
             None
         }
     };
 
-    if reread_wan == None || reread_wan.unwrap() != original_wan {
-        //if !shouldnt_be_byte_perfect && buffer_in != buffer_out {
+    if reread_wan == None || reread_wan.as_ref() != Some(&original_wan) /*|| (!shouldnt_be_byte_perfect && buffer_in != buffer_out)*/ {
         // write the in.bin and out.bin file
         let mut in_file = File::create("in.bin").unwrap();
         in_file.write_all(&buffer_in).unwrap();
 
         let mut out_file = File::create("out.bin").unwrap();
         out_file.write_all(&buffer_out).unwrap();
-
-        //let reread_wan = reread_wan.unwrap();
 
         panic!(
             "failed to correctly read, write and re-read the written file for {}",
@@ -83,8 +80,7 @@ fn main() {
     env_logger::init();
 
     for (monster_file_name, decompress) in [
-        //TODO: many strange things here...
-        //("m_attack.bin", true),
+        ("m_attack.bin", true),
         ("m_ground.bin", false),
         ("monster.bin", true),
     ] {
