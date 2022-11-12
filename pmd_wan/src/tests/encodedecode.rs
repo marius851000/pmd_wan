@@ -4,7 +4,7 @@ mod tests {
 
     use crate::{
         image_tool::{image_to_paletted_bytes, ImageToPaletteBytesData},
-        insert_fragment_in_wanimage, Animation, AnimationFrame, WanImage,
+        insert_frame_in_wanimage, Animation, AnimationFrame, WanImage,
     };
 
     #[test]
@@ -21,7 +21,7 @@ mod tests {
         assert!(palette_data.ordered.len() <= 16);
         palette_data.ordered.resize(16, [0, 0, 0, 0]);
         wanimage.palette.palette = palette_data.ordered.clone();
-        let frame_id = insert_fragment_in_wanimage(
+        let frame_id = insert_frame_in_wanimage(
             image_paletted,
             image.width() as u16,
             image.height() as u16,
@@ -53,7 +53,7 @@ mod tests {
             inserted_frame
         );
         assert_eq!(
-            decoded_wanimage.frames.frames[frame_id as usize]
+            decoded_wanimage.frames_store.frames[frame_id as usize]
                 .fragments
                 .len(),
             3

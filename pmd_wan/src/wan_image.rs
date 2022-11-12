@@ -5,6 +5,7 @@ use crate::{
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
 use anyhow::Context;
+use binread::BinReaderExt;
 use binwrite::BinWrite;
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use image::{ImageBuffer, Rgba};
@@ -13,11 +14,10 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct WanImage {
-    pub image_store: ImageStore,
-    pub frames: FrameStore,
+    pub fragment_store: ImageStore,
+    pub frames_store: FrameStore,
     pub anim_store: AnimationStore,
     pub palette: Palette,
-    pub raw_particule_table: Vec<u8>,
     /// true if the picture have 256 color, false if it only have 16
     pub is_256_color: bool,
     pub sprite_type: SpriteType,
@@ -30,11 +30,10 @@ impl WanImage {
     /// Create an empty 16 color sprite for the given [`SpriteType`]
     pub fn new(sprite_type: SpriteType) -> Self {
         Self {
-            image_store: ImageStore::default(),
-            frames: FrameStore::default(),
+            fragment_store: ImageStore::default(),
+            frames_store: FrameStore::default(),
             anim_store: AnimationStore::default(),
             palette: Palette::default(),
-            raw_particule_table: Vec::new(),
             is_256_color: false,
             sprite_type,
             unk2: 0,
@@ -79,21 +78,19 @@ impl WanImage {
         // third step: decode animation info block
         trace!("reading the animation info block");
         file.seek(SeekFrom::Start(pointer_to_anim_info))?;
-        let pointer_fragment_reference_table = file.read_u32::<LE>()? as u64;
-        if pointer_fragment_reference_table > source_file_lenght {
+        let pointer_frames_table = file.read_u32::<LE>()? as u64;
+        if pointer_frames_table > source_file_lenght {
             return Err(WanError::PostFilePointer("meta frame reference table"));
         }
-        let pointer_particule_offset_table = file.read_u32::<LE>()? as u64;
-        if pointer_particule_offset_table > source_file_lenght {
+        let frame_offset_table = file.read_u32::<LE>()? as u64;
+        if frame_offset_table > source_file_lenght {
             return Err(WanError::PostFilePointer("particule offset table"));
         };
         #[allow(unused_parens)]
-        if (if sprite_type == SpriteType::Chara {
-            pointer_particule_offset_table != 0
-        } else {
-            pointer_particule_offset_table == 0
-        }) {
-            return Err(WanError::ExistenceParticuleOffsetTableForNonChara)
+        if sprite_type == SpriteType::Chara && frame_offset_table == 0 {
+            return Err(WanError::NonExistenceFrameOffsetForChara);
+        } else if sprite_type != SpriteType::Chara && frame_offset_table != 0 {
+            return Err(WanError::ExistenceFrameOffsetForNonChara);
         };
         let pointer_animation_groups_table = file.read_u32::<LE>()? as u64;
         if pointer_animation_groups_table > source_file_lenght {
@@ -124,7 +121,7 @@ impl WanImage {
 
         // decode fragments
         trace!("decoding meta-frame");
-        let fragment_reference_end_pointer: u64 = match pointer_particule_offset_table {
+        let frames_end_pointer: u64 = match frame_offset_table {
             0 => match WanImage::find_first_non_null_animation_seq_entry(
                 &mut file,
                 pointer_animation_groups_table,
@@ -136,19 +133,19 @@ impl WanImage {
             value => value,
         };
 
-        let amount_fragments_raw = fragment_reference_end_pointer
-            .checked_sub(pointer_fragment_reference_table)
-            .ok_or(WanError::OverflowSubstraction(
-                fragment_reference_end_pointer as u64,
-                pointer_fragment_reference_table as u64,
+        let amount_fragments_raw = frames_end_pointer.checked_sub(pointer_frames_table).ok_or(
+            WanError::OverflowSubstraction(
+                frames_end_pointer as u64,
+                pointer_frames_table as u64,
                 "meta frame reference end pointer",
                 "pointer meta frame reference table",
-            ))?;
+            ),
+        )?;
 
         let amount_fragments = amount_fragments_raw / 4;
 
-        file.seek(SeekFrom::Start(pointer_fragment_reference_table))?;
-        let fragments_store = FrameStore::new_from_bytes(&mut file, amount_fragments)?;
+        file.seek(SeekFrom::Start(pointer_frames_table))?;
+        let mut frames_store = FrameStore::new_from_bytes(&mut file, amount_fragments)?;
 
         // decode image
         trace!("reading the image data pointer table");
@@ -157,7 +154,7 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let image_store = ImageStore::new_from_bytes(&mut file, amount_images as u32)?;
+        let fragment_store = ImageStore::new_from_bytes(&mut file, amount_images as u32)?;
 
         // decode animation
         let (anim_store, particule_table_end) = AnimationStore::new(
@@ -166,40 +163,23 @@ impl WanImage {
             amount_animation_group,
         )?;
 
-        // decode the particle offset table
-        let mut raw_particule_table: Vec<u8>;
-        if pointer_particule_offset_table > 0 {
+        // decode the frame offsets table
+        if frame_offset_table != 0 {
+            trace!("decoding frames offset at {:?}", frame_offset_table);
+            file.seek(SeekFrom::Start(frame_offset_table))?;
+            for frame in &mut frames_store.frames {
+                frame.frame_offset = Some(file.read_le()?);
+            }
             if particule_table_end > source_file_lenght {
                 return Err(WanError::PostFilePointer("particle table end"));
             };
-            trace!(
-                "copying the raw particle table (from {} to end at {})",
-                pointer_particule_offset_table,
-                particule_table_end
-            );
-            file.seek(SeekFrom::Start(pointer_particule_offset_table))?;
-            raw_particule_table = vec![
-                0;
-                particule_table_end
-                    .checked_sub(pointer_particule_offset_table)
-                    .ok_or(WanError::OverflowSubstraction(
-                        particule_table_end,
-                        pointer_particule_offset_table,
-                        "particule table end",
-                        "pointer particule offset table"
-                    ))? as usize
-            ];
-            file.read_exact(&mut raw_particule_table)?;
-        } else {
-            raw_particule_table = Vec::new();
         }
 
         Ok(WanImage {
-            image_store,
-            frames: fragments_store,
+            fragment_store,
+            frames_store,
             anim_store,
             palette,
-            raw_particule_table,
             is_256_color,
             sprite_type,
             unk2,
@@ -246,7 +226,8 @@ impl WanImage {
             "start of frames reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let (fragments_references, size_to_allocate_for_max_frame) = self.frames.write(file)?;
+        let (fragments_references, size_to_allocate_for_max_frame) =
+            self.frames_store.write(file)?;
 
         trace!(
             "start of the animation offset: {}",
@@ -264,7 +245,7 @@ impl WanImage {
         );
 
         let (image_offset, sir0_pointer_images) =
-            self.image_store.write(file, &self.compression)?;
+            self.fragment_store.write(file, &self.compression)?;
 
         for pointer in sir0_pointer_images {
             sir0_offsets.push(pointer as u32);
@@ -289,14 +270,21 @@ impl WanImage {
             file.write_u32::<LE>(reference)?;
         }
 
-        let particule_offset = if !self.raw_particule_table.is_empty() {
+        let particule_offset = if self.sprite_type == SpriteType::Chara {
             let particule_offset = file.seek(SeekFrom::Current(0))?;
             trace!(
-                "start of the particule offset: {}",
+                "start of the frame offsets: {}",
                 file.seek(SeekFrom::Current(0))?
             );
-            //HACK: particule offset table parsing is not implement (see the psycommando code of ppmdu)
-            file.write_all(&self.raw_particule_table)?;
+            for frame in &self.frames_store.frames {
+                if let Some(frame_offset) = frame.frame_offset.as_ref() {
+                    frame_offset
+                        .write(file)
+                        .context("Writing a frame offset data")?;
+                } else {
+                    return Err(WanError::NoOffsetDataForFrame)?;
+                }
+            }
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
             Some(particule_offset)
         } else {
@@ -365,7 +353,7 @@ impl WanImage {
             0u16,
             if self.is_256_color { 1u16 } else { 0u16 },
             self.unk2,
-            self.image_store.len() as u16,
+            self.fragment_store.len() as u16,
         )
             .write_options(file, &opt_le)?;
 
@@ -415,7 +403,7 @@ impl WanImage {
         &self,
         fragment: &Fragment,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
-        let image_bytes = match self.image_store.images.get(fragment.image_bytes_index) {
+        let image_bytes = match self.fragment_store.images.get(fragment.image_bytes_index) {
             Some(b) => b,
             None => {
                 return Err(ImageBytesToImageError::NoImageBytes(
@@ -429,7 +417,7 @@ impl WanImage {
 
     pub fn fix_empty_frames(&mut self) {
         let collected: Vec<&mut Frame> = self
-            .frames
+            .frames_store
             .frames
             .iter_mut()
             .filter(|x| (*x).fragments.is_empty())
@@ -437,9 +425,9 @@ impl WanImage {
         if collected.is_empty() {
             return;
         }
-        let image_bytes_index = self.image_store.images.len();
+        let image_bytes_index = self.fragment_store.images.len();
         let resolution = FragmentResolution { x: 8, y: 8 };
-        self.image_store.images.push(ImageBytes {
+        self.fragment_store.images.push(ImageBytes {
             // no panic: We guarantee input parameters are valid
             mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
             z_index: 0,

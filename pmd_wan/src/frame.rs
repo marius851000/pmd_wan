@@ -1,12 +1,14 @@
 use anyhow::{bail, Context};
 
-use crate::{Fragment, WanError};
+use crate::{Fragment, FrameOffset, WanError};
 use std::io::{Read, Write};
 
 /// A single frame of animation
 #[derive(Debug, PartialEq, Eq, Clone, Default)]
 pub struct Frame {
     pub fragments: Vec<Fragment>,
+    /// While this is stored in a separate part of the file, they are mapped to a Frame
+    pub frame_offset: Option<FrameOffset>,
 }
 
 impl Frame {
@@ -22,7 +24,10 @@ impl Frame {
                 break;
             }
         }
-        Ok(Frame { fragments })
+        Ok(Frame {
+            fragments,
+            frame_offset: None,
+        })
     }
 
     /// Returns: size to allocate for this image

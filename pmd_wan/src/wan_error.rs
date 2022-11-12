@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum WanError {
     #[error("an input/output error happened")]
     IOError(#[from] io::Error),
+    #[error("an input error happened with binread")]
+    BinReadError(#[from] binread::Error),
     #[error("an image id reference the previous one, but it is the first image")]
     ImageIDPointBackButFirstImage,
     #[error("a metaframe is inferior to -1, but that is not valid (it is {0})")]
@@ -49,6 +51,12 @@ pub enum WanError {
     PostFilePointer(&'static str),
     #[error("The resolution indices are invalid ({0} and {1})")]
     InvalidResolutionIndice(u8, u8),
-    #[error("There is a reference to a particule offset table while this sprite is not a Chara sprite")]
-    ExistenceParticuleOffsetTableForNonChara,
+    #[error(
+        "There is a reference to a frame offset table while this sprite is not a Chara sprite"
+    )]
+    ExistenceFrameOffsetForNonChara,
+    #[error("There is no reference to a frame offset table in a Chara sprite")]
+    NonExistenceFrameOffsetForChara,
+    #[error("There is a frame that doesn’t have a frame offset in a Chara sprite")]
+    NoOffsetDataForFrame,
 }

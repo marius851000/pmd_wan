@@ -70,7 +70,7 @@ pub fn create_wan_from_multiple_images(
 
     // initialise wan and Frames
     let mut wan = WanImage::new(sprite_type);
-    wan.frames.frames = vec![Frame::default(); images.len()];
+    wan.frames_store.frames = vec![Frame::default(); images.len()];
 
     // step 4 and 5 are combined
     bigger_fragment_finder.find_and_apply_on_wan(&mut wan);
@@ -299,15 +299,15 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         for (bytes, use_of_this_byte) in s.group.into_iter() {
             // TODO: this is mostly copy–pasted from the process_resolution function
             // add the bytes
-            let image_bytes_index = s.wan.image_store.len();
-            s.wan.image_store.images.push(ImageBytes {
+            let image_bytes_index = s.wan.fragment_store.len();
+            s.wan.fragment_store.images.push(ImageBytes {
                 mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
                     .unwrap(),
                 z_index: 0,
             });
             // and their usage
             for usage in use_of_this_byte {
-                let frame = &mut s.wan.frames.frames[usage.image_id as usize];
+                let frame = &mut s.wan.frames_store.frames[usage.image_id as usize];
                 frame.fragments.push(Fragment {
                     unk1: 0,
                     unk3_4: None,
@@ -426,8 +426,8 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     }
                     // Yay, we found a bunch of big fragment we can finally push that to Wan
                     // push the bytes
-                    let image_bytes_index = self.wan.image_store.len();
-                    self.wan.image_store.images.push(ImageBytes {
+                    let image_bytes_index = self.wan.fragment_store.len();
+                    self.wan.fragment_store.images.push(ImageBytes {
                         mixed_pixels: encode_fragment_pixels(
                             &base_bigger_fragment.unwrap().0,
                             resolution,
@@ -437,7 +437,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     });
                     // and their usage
                     for (position, flip) in all_big_fragment {
-                        self.wan.frames.frames[position.image_id as usize]
+                        self.wan.frames_store.frames[position.image_id as usize]
                             .fragments
                             .push(Fragment {
                                 unk1: 0,

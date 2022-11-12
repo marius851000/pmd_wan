@@ -58,7 +58,7 @@ pub use fragment_finder::{
 };
 
 mod image_to_wan;
-pub use image_to_wan::insert_fragment_in_wanimage;
+pub use image_to_wan::insert_frame_in_wanimage;
 
 pub mod image_tool;
 
@@ -67,6 +67,9 @@ pub use multi_images_to_wan::create_wan_from_multiple_images;
 
 mod normalized_bytes;
 pub use normalized_bytes::{NormalizedBytes, VariableNormalizedBytes};
+
+mod frame_offset;
+pub use frame_offset::FrameOffset;
 
 use binwrite::WriterOption;
 pub fn get_opt_le() -> WriterOption {

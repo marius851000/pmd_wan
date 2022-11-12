@@ -155,7 +155,7 @@ impl ImageBuffer {
     }
 }
 
-pub fn insert_fragment_in_wanimage(
+pub fn insert_frame_in_wanimage(
     image: Vec<u8>,
     width: u16,
     height: u16,
@@ -185,8 +185,11 @@ pub fn insert_fragment_in_wanimage(
     };
 
     Ok(if !fragments.is_empty() {
-        let frame_id = wanimage.frames.frames.len();
-        wanimage.frames.frames.push(Frame { fragments });
+        let frame_id = wanimage.frames_store.frames.len();
+        wanimage.frames_store.frames.push(Frame {
+            fragments,
+            frame_offset: None,
+        });
         Some(frame_id)
     } else {
         None
@@ -241,8 +244,8 @@ fn insert_fragment_pos_in_wan_image(
             let buffer_to_write =
                 cut_section.get_fragment(0, 0, fragment_size.x as u16, fragment_size.y as u16, 0);
 
-            let image_bytes_index = wanimage.image_store.images.len();
-            wanimage.image_store.images.push(ImageBytes {
+            let image_bytes_index = wanimage.fragment_store.images.len();
+            wanimage.fragment_store.images.push(ImageBytes {
                 mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
                     .context("failed to encode the input byte. This is an internal error")?,
                 z_index: 1,
@@ -350,10 +353,10 @@ fn get_image_fragment_test() {
 fn insert_frame_flat_test() {
     let mut wanimage = WanImage::new(crate::SpriteType::PropsUI);
     wanimage.palette.palette.push([255, 255, 255, 128]);
-    let frame_id = insert_fragment_in_wanimage(vec![1; 36], 6, 6, &mut wanimage, 0)
+    let frame_id = insert_frame_in_wanimage(vec![1; 36], 6, 6, &mut wanimage, 0)
         .unwrap()
         .unwrap();
-    let frame = &wanimage.frames.frames[frame_id];
+    let frame = &wanimage.frames_store.frames[frame_id];
     let fragment = &frame.fragments[0];
     assert_eq!(fragment.resolution, FragmentResolution { x: 8, y: 8 });
     assert_eq!(fragment.pal_idx, 0);
@@ -362,9 +365,7 @@ fn insert_frame_flat_test() {
 #[test]
 fn insert_empty_image_test() {
     let mut wanimage = WanImage::new(crate::SpriteType::PropsUI);
-    assert!(
-        insert_fragment_in_wanimage(vec![0; 4], 2, 2, &mut wanimage, 0)
-            .unwrap()
-            .is_none()
-    );
+    assert!(insert_frame_in_wanimage(vec![0; 4], 2, 2, &mut wanimage, 0)
+        .unwrap()
+        .is_none());
 }

@@ -49,7 +49,7 @@ pub fn main() {
     wan_image.palette.palette = palette_data.ordered.clone();
 
     let mut animation_frames = Vec::new();
-    for frame_id in 0..wan_image.frames.frames.len() {
+    for frame_id in 0..wan_image.frames_store.frames.len() {
         animation_frames.push(AnimationFrame {
             duration: 0,
             flag: 0,
