@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::{CompressionMethod, FragmentResolution, Palette, WanError};
 
 #[derive(Error, Debug)]
-pub enum ImageBytesToImageError {
+pub enum FragmentBytesToImageError {
     #[error("The new image you tried to create would end up with 0 pixels")]
     ZeroSizedImage,
     #[error("The image can't be created. The resolution is likely too big compared the size of this ImageBytes")]
@@ -18,25 +18,25 @@ pub enum ImageBytesToImageError {
     #[error("The metaframe point to the ImageBytes {0}, which doesn't exist")]
     NoImageBytes(usize),
     #[error("Failed to decode the image")]
-    CantDecodeImage(#[from] DecodeImageError),
+    CantDecodeImage(#[from] DecodeFragmentBytesError),
 }
 
 #[derive(Debug)]
-pub struct ImageAssemblyEntry {
+pub struct FragmentBytesAssemblyEntry {
     pub pixel_src: u64,
     pub pixel_amount: u32,
     pub byte_amount: u16,
     pub _z_index: u32,
 }
 
-impl ImageAssemblyEntry {
-    fn new_from_bytes<F: Read>(file: &mut F) -> Result<ImageAssemblyEntry, WanError> {
+impl FragmentBytesAssemblyEntry {
+    fn new_from_bytes<F: Read>(file: &mut F) -> Result<FragmentBytesAssemblyEntry, WanError> {
         let pixel_src = file.read_u32::<LE>()? as u64;
         let byte_amount = file.read_u16::<LE>()?;
         let pixel_amount = (byte_amount as u32) * 2;
         file.read_u16::<LE>()?;
         let z_index = file.read_u32::<LE>()?;
-        Ok(ImageAssemblyEntry {
+        Ok(FragmentBytesAssemblyEntry {
             pixel_src,
             pixel_amount,
             byte_amount,
@@ -61,19 +61,19 @@ impl ImageAssemblyEntry {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct ImageBytes {
+pub struct FragmentBytes {
     pub mixed_pixels: Vec<u8>,
     pub z_index: u32,
 }
 
-impl ImageBytes {
-    pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<ImageBytes, WanError> {
+impl FragmentBytes {
+    pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<FragmentBytes, WanError> {
         let mut img_asm_table = Vec::new();
         let mut image_size = 0;
 
         let mut last_pointer = None; //for check
         loop {
-            let asm_entry = ImageAssemblyEntry::new_from_bytes(file)?;
+            let asm_entry = FragmentBytesAssemblyEntry::new_from_bytes(file)?;
             image_size += asm_entry.pixel_amount;
             if asm_entry.is_null() {
                 break;
@@ -141,7 +141,7 @@ impl ImageBytes {
         //No panic : z_index is redefined whenever bytes is added to mixed_pixels, and it return earlier if that's the case
         let z_index = z_index.unwrap();
 
-        Ok(ImageBytes {
+        Ok(FragmentBytes {
             mixed_pixels,
             z_index,
         })
@@ -169,7 +169,7 @@ impl ImageBytes {
         let mut assembly_table = compression_method.compress(self, &self.mixed_pixels, file)?;
 
         //insert empty entry
-        assembly_table.push(ImageAssemblyEntry {
+        assembly_table.push(FragmentBytesAssemblyEntry {
             pixel_src: 0,
             pixel_amount: 0,
             byte_amount: 0,
@@ -195,9 +195,9 @@ impl ImageBytes {
         palette: &Palette,
         resolution: &FragmentResolution,
         palette_id: u16,
-    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
+    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, FragmentBytesToImageError> {
         if resolution.x == 0 || resolution.y == 0 {
-            return Err(ImageBytesToImageError::ZeroSizedImage);
+            return Err(FragmentBytesToImageError::ZeroSizedImage);
         };
 
         let mut pixels: Vec<u8> =
@@ -209,7 +209,7 @@ impl ImageBytes {
             } else {
                 match palette.get(pixel, palette_id) {
                     Some(c) => c,
-                    None => return Err(ImageBytesToImageError::UnknownColor(pixel, palette_id)),
+                    None => return Err(FragmentBytesToImageError::UnknownColor(pixel, palette_id)),
                 }
             };
             color[3] = color[3].saturating_mul(2);
@@ -218,7 +218,7 @@ impl ImageBytes {
 
         let img = match ImageBuffer::from_vec(resolution.x as u32, resolution.y as u32, pixels) {
             Some(img) => img,
-            None => return Err(ImageBytesToImageError::CantCreateImage),
+            None => return Err(FragmentBytesToImageError::CantCreateImage),
         };
 
         Ok(img)
@@ -226,7 +226,7 @@ impl ImageBytes {
 }
 
 #[derive(Error, Debug)]
-pub enum DecodeImageError {
+pub enum DecodeFragmentBytesError {
     #[error("The x resolution ({0}) isn't a multiple of 8")]
     XResolutionNotMultipleEight(u8),
     #[error("The y resolution ({0}) isn't a multiple of 8")]
@@ -239,15 +239,15 @@ pub enum DecodeImageError {
 pub fn decode_fragment_pixels(
     pixels: &[u8],
     resolution: &FragmentResolution,
-) -> Result<Vec<u8>, DecodeImageError> {
+) -> Result<Vec<u8>, DecodeFragmentBytesError> {
     if resolution.x % 8 != 0 {
-        return Err(DecodeImageError::XResolutionNotMultipleEight(resolution.x));
+        return Err(DecodeFragmentBytesError::XResolutionNotMultipleEight(resolution.x));
     }
     if resolution.y % 8 != 0 {
-        return Err(DecodeImageError::YResolutionNotMultipleEight(resolution.y));
+        return Err(DecodeFragmentBytesError::YResolutionNotMultipleEight(resolution.y));
     }
     if resolution.x == 0 || resolution.y == 0 {
-        return Err(DecodeImageError::NoPixel);
+        return Err(DecodeFragmentBytesError::NoPixel);
     }
     let mut dest = vec![0; resolution.x as usize * resolution.y as usize];
     let mut chunk_x = 0;

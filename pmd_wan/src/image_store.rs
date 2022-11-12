@@ -1,10 +1,10 @@
-use crate::{CompressionMethod, ImageBytes, WanError};
+use crate::{CompressionMethod, FragmentBytes, WanError};
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug, Default)]
 pub struct ImageStore {
-    pub images: Vec<ImageBytes>,
+    pub images: Vec<FragmentBytes>,
 }
 
 impl ImageStore {
@@ -28,7 +28,7 @@ impl ImageStore {
         for (image_id, image) in image_pointers.iter().enumerate() {
             trace!("reading image n°{} at {}", image_id, image);
             file.seek(SeekFrom::Start(*image))?;
-            let img = ImageBytes::new_from_bytes(file)?;
+            let img = FragmentBytes::new_from_bytes(file)?;
             images.push(img);
         }
 

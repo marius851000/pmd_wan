@@ -25,10 +25,10 @@ pub use frame_store::FrameStore;
 mod sprite_type;
 pub use sprite_type::SpriteType;
 
-mod image_bytes;
-pub use crate::image_bytes::{
-    decode_fragment_pixels, encode_fragment_pixels, DecodeImageError, ImageBytes,
-    ImageBytesToImageError,
+mod fragment_bytes;
+pub use crate::fragment_bytes::{
+    decode_fragment_pixels, encode_fragment_pixels, DecodeFragmentBytesError, FragmentBytes,
+    FragmentBytesToImageError,
 };
 
 mod palette;

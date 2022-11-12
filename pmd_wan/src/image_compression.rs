@@ -2,7 +2,7 @@ use std::io::{Seek, SeekFrom, Write};
 
 use byteorder::WriteBytesExt;
 
-use crate::{image_bytes::ImageAssemblyEntry, ImageBytes, WanError};
+use crate::{fragment_bytes::FragmentBytesAssemblyEntry, FragmentBytes, WanError};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CompressionMethod {
@@ -20,10 +20,10 @@ pub enum CompressionMethod {
 impl CompressionMethod {
     pub fn compress<F: Write + Seek>(
         &self,
-        image: &ImageBytes,
+        image: &FragmentBytes,
         pixel_list: &[u8],
         file: &mut F,
-    ) -> Result<Vec<ImageAssemblyEntry>, WanError> {
+    ) -> Result<Vec<FragmentBytesAssemblyEntry>, WanError> {
         let compression = if pixel_list.len() % 64 != 0 {
             CompressionMethod::NoCompression
         } else {
@@ -34,7 +34,7 @@ impl CompressionMethod {
             return Err(WanError::EmptyImageBytes);
         }
 
-        let mut assembly_table: Vec<ImageAssemblyEntry> = vec![];
+        let mut assembly_table: Vec<FragmentBytesAssemblyEntry> = vec![];
 
         match compression {
             Self::CompressionMethodOriginal => {
@@ -52,16 +52,16 @@ impl CompressionMethod {
                         }
                     }
 
-                    fn to_assembly(&self) -> ImageAssemblyEntry {
+                    fn to_assembly(&self) -> FragmentBytesAssemblyEntry {
                         match self {
-                            ActualEntry::Null(lenght, z_index) => ImageAssemblyEntry {
+                            ActualEntry::Null(lenght, z_index) => FragmentBytesAssemblyEntry {
                                 pixel_src: 0,
                                 pixel_amount: *lenght,
                                 byte_amount: (*lenght / 2) as u16, //NOTE: lenght is always <= than 64x64
                                 _z_index: *z_index,
                             },
                             ActualEntry::Some(initial_offset, lenght, z_index) => {
-                                ImageAssemblyEntry {
+                                FragmentBytesAssemblyEntry {
                                     pixel_src: *initial_offset,
                                     pixel_amount: *lenght,
                                     byte_amount: (*lenght / 2) as u16,
@@ -218,7 +218,7 @@ impl CompressionMethod {
                     file.write_u8((pixels[0] << 4) + pixels[1])?;
                     byte_len += 1;
                 }
-                assembly_table.push(ImageAssemblyEntry {
+                assembly_table.push(FragmentBytesAssemblyEntry {
                     pixel_src: start_offset,
                     pixel_amount: byte_len * 2,
                     byte_amount: byte_len as u16,

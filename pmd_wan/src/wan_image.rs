@@ -1,6 +1,6 @@
 use crate::{
     encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
-    Fragment, FragmentFlip, FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
+    Fragment, FragmentFlip, FragmentResolution, Frame, FragmentBytes, FragmentBytesToImageError,
 };
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
 
@@ -402,11 +402,11 @@ impl WanImage {
     pub fn get_image_for_fragment(
         &self,
         fragment: &Fragment,
-    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, ImageBytesToImageError> {
+    ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, FragmentBytesToImageError> {
         let image_bytes = match self.fragment_store.images.get(fragment.image_bytes_index) {
             Some(b) => b,
             None => {
-                return Err(ImageBytesToImageError::NoImageBytes(
+                return Err(FragmentBytesToImageError::NoImageBytes(
                     fragment.image_bytes_index,
                 ))
             }
@@ -427,7 +427,7 @@ impl WanImage {
         }
         let image_bytes_index = self.fragment_store.images.len();
         let resolution = FragmentResolution { x: 8, y: 8 };
-        self.fragment_store.images.push(ImageBytes {
+        self.fragment_store.images.push(FragmentBytes {
             // no panic: We guarantee input parameters are valid
             mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
             z_index: 0,
