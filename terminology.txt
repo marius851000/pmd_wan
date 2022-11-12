@@ -1,2 +1,4 @@
 Fragment: The individual image that get displayed on the DS screen. Can only go to a resolution up to 64x64 pixel. When not used in combinaison with FragmentBytes, refer to the recording of the fragment, without their bytes, which are stored somewhere different.
 FragmentBytes: The bytes that contain the content display by a fragment.
+Frame: A regroupment of Fragments
+AnimationFrame: A single frame of animation. Contain reference to a Frame, as well as some more animation-related data.
