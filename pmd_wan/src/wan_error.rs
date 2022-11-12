@@ -17,12 +17,12 @@ pub enum WanError {
     InvalidResolution,
     #[error("pointer to image parts are not coherent")]
     IncoherentPointerToImagePart,
-    #[error("An ImageBytes buffer is empty")]
-    EmptyImageBytes,
+    #[error("An FragmentBytes buffer is empty")]
+    EmptyFragmentBytes,
     #[error("an invalid alpha level was found in the picture")]
     ImpossibleAlphaLevel,
-    #[error("an image data pointer is null")]
-    NullImagePointer,
+    #[error("an fragment bytes pointer is null")]
+    NullFragmentBytesPointer,
     #[error("the image does not have a resolution")]
     ImageWithoutResolution,
     #[error("the palette data doesn't end with 0s")]

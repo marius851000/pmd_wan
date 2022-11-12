@@ -20,7 +20,7 @@ pub enum CompressionMethod {
 impl CompressionMethod {
     pub fn compress<F: Write + Seek>(
         &self,
-        image: &FragmentBytes,
+        fragment_bytes: &FragmentBytes,
         pixel_list: &[u8],
         file: &mut F,
     ) -> Result<Vec<FragmentBytesAssemblyEntry>, WanError> {
@@ -31,7 +31,7 @@ impl CompressionMethod {
         };
 
         if pixel_list.is_empty() {
-            return Err(WanError::EmptyImageBytes);
+            return Err(WanError::EmptyFragmentBytes);
         }
 
         let mut assembly_table: Vec<FragmentBytesAssemblyEntry> = vec![];
@@ -117,7 +117,7 @@ impl CompressionMethod {
                         Some(ActualEntry::new(
                             is_all_black,
                             pos_before_area,
-                            image.z_index,
+                            fragment_bytes.z_index,
                         ))
                     } else {
                         // no panic : need_to_create_new_entry is false if actual_entry is none
@@ -222,7 +222,7 @@ impl CompressionMethod {
                     pixel_src: start_offset,
                     pixel_amount: byte_len * 2,
                     byte_amount: byte_len as u16,
-                    _z_index: image.z_index,
+                    _z_index: fragment_bytes.z_index,
                 })
             }
         };

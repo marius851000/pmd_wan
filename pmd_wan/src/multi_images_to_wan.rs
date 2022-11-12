@@ -6,8 +6,8 @@ use std::{
 
 use crate::{
     encode_fragment_pixels, find_fragments_in_images, fragment_finder::FragmentUse,
-    pad_seven_pixel, Fragment, FragmentFinderData, FragmentFlip, FragmentResolution, Frame,
-    GeneralResolution, FragmentBytes, NormalizedBytes, SpriteType, VariableNormalizedBytes, WanImage,
+    pad_seven_pixel, Fragment, FragmentBytes, FragmentFinderData, FragmentFlip, FragmentResolution,
+    Frame, GeneralResolution, NormalizedBytes, SpriteType, VariableNormalizedBytes, WanImage,
 };
 use anyhow::{bail, Context};
 
@@ -300,7 +300,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             // TODO: this is mostly copy–pasted from the process_resolution function
             // add the bytes
             let image_bytes_index = s.wan.fragment_store.len();
-            s.wan.fragment_store.images.push(FragmentBytes {
+            s.wan.fragment_store.fragment_bytes.push(FragmentBytes {
                 mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
                     .unwrap(),
                 z_index: 0,
@@ -427,7 +427,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     // Yay, we found a bunch of big fragment we can finally push that to Wan
                     // push the bytes
                     let image_bytes_index = self.wan.fragment_store.len();
-                    self.wan.fragment_store.images.push(FragmentBytes {
+                    self.wan.fragment_store.fragment_bytes.push(FragmentBytes {
                         mixed_pixels: encode_fragment_pixels(
                             &base_bigger_fragment.unwrap().0,
                             resolution,

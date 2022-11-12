@@ -135,7 +135,7 @@ impl FragmentBytes {
         }
 
         if mixed_pixels.is_empty() {
-            return Err(WanError::EmptyImageBytes);
+            return Err(WanError::EmptyFragmentBytes);
         }
 
         //No panic : z_index is redefined whenever bytes is added to mixed_pixels, and it return earlier if that's the case
@@ -241,10 +241,14 @@ pub fn decode_fragment_pixels(
     resolution: &FragmentResolution,
 ) -> Result<Vec<u8>, DecodeFragmentBytesError> {
     if resolution.x % 8 != 0 {
-        return Err(DecodeFragmentBytesError::XResolutionNotMultipleEight(resolution.x));
+        return Err(DecodeFragmentBytesError::XResolutionNotMultipleEight(
+            resolution.x,
+        ));
     }
     if resolution.y % 8 != 0 {
-        return Err(DecodeFragmentBytesError::YResolutionNotMultipleEight(resolution.y));
+        return Err(DecodeFragmentBytesError::YResolutionNotMultipleEight(
+            resolution.y,
+        ));
     }
     if resolution.x == 0 || resolution.y == 0 {
         return Err(DecodeFragmentBytesError::NoPixel);

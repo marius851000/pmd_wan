@@ -1,8 +1,8 @@
 use crate::{
     encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
-    Fragment, FragmentFlip, FragmentResolution, Frame, FragmentBytes, FragmentBytesToImageError,
+    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, FragmentResolution, Frame,
 };
-use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
+use crate::{FragmentStore, FrameStore, Palette, SpriteType, WanError};
 
 use anyhow::Context;
 use binread::BinReaderExt;
@@ -14,7 +14,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct WanImage {
-    pub fragment_store: ImageStore,
+    pub fragment_store: FragmentStore,
     pub frames_store: FrameStore,
     pub anim_store: AnimationStore,
     pub palette: Palette,
@@ -30,7 +30,7 @@ impl WanImage {
     /// Create an empty 16 color sprite for the given [`SpriteType`]
     pub fn new(sprite_type: SpriteType) -> Self {
         Self {
-            fragment_store: ImageStore::default(),
+            fragment_store: FragmentStore::default(),
             frames_store: FrameStore::default(),
             anim_store: AnimationStore::default(),
             palette: Palette::default(),
@@ -154,7 +154,7 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let fragment_store = ImageStore::new_from_bytes(&mut file, amount_images as u32)?;
+        let fragment_store = FragmentStore::new_from_bytes(&mut file, amount_images as u32)?;
 
         // decode animation
         let (anim_store, particule_table_end) = AnimationStore::new(
@@ -403,7 +403,11 @@ impl WanImage {
         &self,
         fragment: &Fragment,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, FragmentBytesToImageError> {
-        let image_bytes = match self.fragment_store.images.get(fragment.image_bytes_index) {
+        let image_bytes = match self
+            .fragment_store
+            .fragment_bytes
+            .get(fragment.image_bytes_index)
+        {
             Some(b) => b,
             None => {
                 return Err(FragmentBytesToImageError::NoImageBytes(
@@ -425,9 +429,9 @@ impl WanImage {
         if collected.is_empty() {
             return;
         }
-        let image_bytes_index = self.fragment_store.images.len();
+        let image_bytes_index = self.fragment_store.fragment_bytes.len();
         let resolution = FragmentResolution { x: 8, y: 8 };
-        self.fragment_store.images.push(FragmentBytes {
+        self.fragment_store.fragment_bytes.push(FragmentBytes {
             // no panic: We guarantee input parameters are valid
             mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
             z_index: 0,

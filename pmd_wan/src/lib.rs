@@ -35,7 +35,7 @@ mod palette;
 pub use palette::Palette;
 
 mod image_store;
-pub use image_store::ImageStore;
+pub use image_store::FragmentStore;
 
 mod animation_frame;
 pub use animation_frame::AnimationFrame;
@@ -46,8 +46,8 @@ pub use animation_store::AnimationStore;
 mod animation;
 pub use animation::Animation;
 
-mod image_compression;
-pub use image_compression::*;
+mod fragment_bytes_compression;
+pub use fragment_bytes_compression::*;
 
 mod fragment_flip;
 pub use fragment_flip::{FragmentFlip, FragmentFlipError};
