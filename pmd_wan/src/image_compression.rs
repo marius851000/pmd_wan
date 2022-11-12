@@ -2,7 +2,7 @@ use std::io::{Seek, SeekFrom, Write};
 
 use byteorder::WriteBytesExt;
 
-use crate::{imagebytes::ImageAssemblyEntry, ImageBytes, WanError};
+use crate::{image_bytes::ImageAssemblyEntry, ImageBytes, WanError};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum CompressionMethod {

@@ -3,7 +3,7 @@ use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(Debug)]
-struct AnimGroupEntry {
+struct AnimationGroupEntry {
     pointer: u32,
     group_lenght: u32,
     id: u16,
@@ -12,26 +12,26 @@ struct AnimGroupEntry {
 /// Contain all the [`Animation`], as well as all the animation group (a.k.a animation table in ppmdu sprite editor).
 /// Animation group are a list of [`Animation`]. An animation group usually have 8 entry, one per rotation of the monster.
 #[derive(PartialEq, Eq, Debug, Default)]
-pub struct AnimStore {
+pub struct AnimationStore {
     /// some stuff used to ensure perfect reproduçability. You should probably lease this to None
     pub copied_on_previous: Option<Vec<bool>>, //indicate if a sprite can copy on the previous. Will always copy if possible if None
     pub anim_groups: Vec<Vec<Animation>>, //usize1 = start, usize2 = lenght
 }
 
-impl AnimStore {
+impl AnimationStore {
     pub fn new<F: Read + Seek>(
         file: &mut F,
         pointer_animation_groups_table: u64,
         amount_animation_group: u16,
-    ) -> Result<(AnimStore, u64), WanError> {
+    ) -> Result<(AnimationStore, u64), WanError> {
         //TODO: rewrite this function, it seem to be too complicated to understand
         file.seek(SeekFrom::Start(pointer_animation_groups_table))?;
-        let mut anim_group_entry: Vec<Option<AnimGroupEntry>> = Vec::new();
+        let mut anim_group_entry: Vec<Option<AnimationGroupEntry>> = Vec::new();
         for animation_group_id in 0..amount_animation_group {
             let pointer = file.read_u32::<LE>()?;
             let length = file.read_u32::<LE>()?;
             if pointer != 0 && length != 0 {
-                anim_group_entry.push(Some(AnimGroupEntry {
+                anim_group_entry.push(Some(AnimationGroupEntry {
                     pointer,
                     group_lenght: length,
                     id: animation_group_id,
@@ -99,7 +99,7 @@ impl AnimStore {
         }
 
         Ok((
-            AnimStore {
+            AnimationStore {
                 copied_on_previous: Some(copied_on_previous),
                 anim_groups: anim_groups_result,
             },

@@ -4,12 +4,11 @@ extern crate log;
 #[cfg(test)]
 pub mod tests;
 
-pub mod wanimage;
-use binwrite::WriterOption;
-pub use wanimage::WanImage;
+pub mod wan_image;
+pub use wan_image::WanImage;
 
-mod wanerror;
-pub use wanerror::WanError;
+mod wan_error;
+pub use wan_error::WanError;
 
 mod frame;
 pub use frame::Frame;
@@ -23,11 +22,11 @@ pub use fragment_resolution::FragmentResolution;
 mod frame_store;
 pub use frame_store::FrameStore;
 
-mod spritetype;
-pub use spritetype::SpriteType;
+mod sprite_type;
+pub use sprite_type::SpriteType;
 
-mod imagebytes;
-pub use crate::imagebytes::{
+mod image_bytes;
+pub use crate::image_bytes::{
     decode_fragment_pixels, encode_fragment_pixels, DecodeImageError, ImageBytes,
     ImageBytesToImageError,
 };
@@ -35,20 +34,20 @@ pub use crate::imagebytes::{
 mod palette;
 pub use palette::Palette;
 
-mod imagestore;
-pub use imagestore::ImageStore;
+mod image_store;
+pub use image_store::ImageStore;
 
-mod animationframe;
-pub use animationframe::AnimationFrame;
+mod animation_frame;
+pub use animation_frame::AnimationFrame;
 
-mod animstore;
-pub use animstore::AnimStore;
+mod animation_store;
+pub use animation_store::AnimationStore;
 
 mod animation;
 pub use animation::Animation;
 
-mod imagecompression;
-pub use imagecompression::*;
+mod image_compression;
+pub use image_compression::*;
 
 mod fragment_flip;
 pub use fragment_flip::{FragmentFlip, FragmentFlipError};
@@ -69,6 +68,7 @@ pub use multi_images_to_wan::create_wan_from_multiple_images;
 mod normalized_bytes;
 pub use normalized_bytes::{NormalizedBytes, VariableNormalizedBytes};
 
+use binwrite::WriterOption;
 pub fn get_opt_le() -> WriterOption {
     binwrite::writer_option_new!(endian: binwrite::Endian::Little)
 }

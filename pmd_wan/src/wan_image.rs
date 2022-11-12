@@ -1,5 +1,5 @@
 use crate::{
-    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimStore, CompressionMethod, Fragment,
+    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod, Fragment,
     FragmentFlip, FragmentResolution, Frame, ImageBytes, ImageBytesToImageError,
 };
 use crate::{FrameStore, ImageStore, Palette, SpriteType, WanError};
@@ -15,7 +15,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 pub struct WanImage {
     pub image_store: ImageStore,
     pub frames: FrameStore,
-    pub anim_store: AnimStore,
+    pub anim_store: AnimationStore,
     pub palette: Palette,
     pub raw_particule_table: Vec<u8>,
     /// true if the picture have 256 color, false if it only have 16
@@ -32,7 +32,7 @@ impl WanImage {
         Self {
             image_store: ImageStore::default(),
             frames: FrameStore::default(),
-            anim_store: AnimStore::default(),
+            anim_store: AnimationStore::default(),
             palette: Palette::default(),
             raw_particule_table: Vec::new(),
             is_256_color: false,
@@ -152,7 +152,7 @@ impl WanImage {
         let image_store = ImageStore::new_from_bytes(&mut file, amount_images as u32)?;
 
         // decode animation
-        let (anim_store, particule_table_end) = AnimStore::new(
+        let (anim_store, particule_table_end) = AnimationStore::new(
             &mut file,
             pointer_animation_groups_table,
             amount_animation_group,

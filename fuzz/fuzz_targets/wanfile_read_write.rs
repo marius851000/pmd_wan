@@ -18,7 +18,7 @@ fuzz_target!(|data: &[u8]| {
             let mut reread_wan = pmd_wan::WanImage::decode_wan(reread_file).unwrap();
             reread_wan.anim_store.copied_on_previous = None;
             //TODO: ensure this hold true every time
-            //assert_eq!(reread_wan, valid);
+            //assert_eq!(valid, reread_wan);
         }
     }
 });
