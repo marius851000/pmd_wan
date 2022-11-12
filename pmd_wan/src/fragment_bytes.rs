@@ -11,14 +11,14 @@ use crate::{CompressionMethod, FragmentResolution, Palette, WanError};
 pub enum FragmentBytesToImageError {
     #[error("The new image you tried to create would end up with 0 pixels")]
     ZeroSizedImage,
-    #[error("The image can't be created. The resolution is likely too big compared the size of this ImageBytes")]
+    #[error("The image can't be created. The resolution is likely too big compared the size of this FragmentBytes")]
     CantCreateImage,
-    #[error("The color with the id {0} and the palette id {1} doesn't exist in the palette")]
+    #[error("The color with the id {0} on the palette with the id {1} doesn't exist in the palette")]
     UnknownColor(u8, u16),
-    #[error("The metaframe point to the ImageBytes {0}, which doesn't exist")]
-    NoImageBytes(usize),
-    #[error("Failed to decode the image")]
-    CantDecodeImage(#[from] DecodeFragmentBytesError),
+    #[error("The metaframe point to the FragmentBytes {0}, which doesn't exist")]
+    NoFragmentBytes(usize),
+    #[error("Failed to decode the FragmentBytes")]
+    CantDecodeFragmentBytes(#[from] DecodeFragmentBytesError),
 }
 
 #[derive(Debug)]
@@ -68,13 +68,13 @@ pub struct FragmentBytes {
 
 impl FragmentBytes {
     pub fn new_from_bytes<F: Read + Seek>(file: &mut F) -> Result<FragmentBytes, WanError> {
-        let mut img_asm_table = Vec::new();
-        let mut image_size = 0;
+        let mut fbytes_asm_table = Vec::new();
+        let mut fbytes_size = 0;
 
         let mut last_pointer = None; //for check
         loop {
             let asm_entry = FragmentBytesAssemblyEntry::new_from_bytes(file)?;
-            image_size += asm_entry.pixel_amount;
+            fbytes_size += asm_entry.pixel_amount;
             if asm_entry.is_null() {
                 break;
             } else {
@@ -92,29 +92,29 @@ impl FragmentBytes {
                             if value == asm_entry.pixel_src {
                                 last_pointer = Some(asm_entry.byte_amount as u64 + value);
                             } else {
-                                return Err(WanError::IncoherentPointerToImagePart);
+                                return Err(WanError::IncoherentPointerToFragmentBytesPart);
                             }
                         }
                     }
                 };
-                img_asm_table.push(asm_entry);
+                fbytes_asm_table.push(asm_entry);
             }
         }
         trace!(
             "the image contain {} assembly entry, with an image size of {}.",
-            img_asm_table.len(),
-            image_size
+            fbytes_asm_table.len(),
+            fbytes_size
         );
 
         let mut mixed_pixels = Vec::with_capacity(64 * 64);
 
         let mut z_index = None;
 
-        trace!("{:#?}", img_asm_table);
+        trace!("{:#?}", fbytes_asm_table);
 
         let mut read_buffer = Vec::with_capacity(64);
 
-        for entry in &img_asm_table {
+        for entry in &fbytes_asm_table {
             if entry.pixel_src == 0 {
                 mixed_pixels.extend(&vec![0; entry.pixel_amount as usize]);
             } else {
@@ -128,7 +128,7 @@ impl FragmentBytes {
             // check that all part of the image have the same z index
             if let Some(index) = z_index {
                 if index != entry._z_index {
-                    return Err(WanError::NonConstantIndexInImage);
+                    return Err(WanError::NonConstantIndexInFragmentBytes);
                 };
             };
             z_index = Some(entry._z_index);

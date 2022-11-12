@@ -39,7 +39,7 @@ impl FrameStore {
 
         for meta_frame_id in 0..nb_meta_frame {
             trace!(
-                "parsing meta-frame n°{} (at offset {})",
+                "parsing frame n°{} (at offset {})",
                 meta_frame_id,
                 meta_frame_reference[meta_frame_id as usize]
             );
@@ -62,7 +62,7 @@ impl FrameStore {
             frame_references.push(file.seek(SeekFrom::Current(0))? as u32);
             let local_size_to_allocate = frame
                 .write(file)
-                .with_context(move || format!("can't write the meta frame group {:?}", frame))?;
+                .with_context(move || format!("can't write the frame group {:?}", frame))?;
             size_to_allocate = size_to_allocate.max(local_size_to_allocate);
         }
 

@@ -28,7 +28,7 @@ fn test_read_reencode<F: Read + Seek>(
         Ok(r) => r,
         Err(e) => {
             let e = match e {
-                WanError::ImageIDPointBackButFirstImage => return,
+                WanError::FragmentBytesIDPointBackButFirstFragment => return,
                 e => e,
             };
             let mut f = File::create("./in.bin").unwrap();

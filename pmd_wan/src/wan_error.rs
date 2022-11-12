@@ -7,24 +7,24 @@ pub enum WanError {
     IOError(#[from] io::Error),
     #[error("an input error happened with binread")]
     BinReadError(#[from] binread::Error),
-    #[error("an image id reference the previous one, but it is the first image")]
-    ImageIDPointBackButFirstImage,
+    #[error("an fragment’s FragmentBytes id reference the previous one, but it is the first Fragment")]
+    FragmentBytesIDPointBackButFirstFragment,
     #[error("a metaframe is inferior to -1, but that is not valid (it is {0})")]
     FragmentLessThanLessOne(i16),
     #[error("While creating a meta frame store: the check for the offset of the pointer of the animation group are not valid!")]
     InvalidOffset,
-    #[error("the resolution for an image wasn't found")]
+    #[error("the resolution for a FragmentBytes wasn't found")]
     InvalidResolution,
-    #[error("pointer to image parts are not coherent")]
-    IncoherentPointerToImagePart,
+    #[error("pointer to FragmentBytes parts are not coherent")]
+    IncoherentPointerToFragmentBytesPart,
     #[error("An FragmentBytes buffer is empty")]
     EmptyFragmentBytes,
     #[error("an invalid alpha level was found in the picture")]
     ImpossibleAlphaLevel,
     #[error("an fragment bytes pointer is null")]
     NullFragmentBytesPointer,
-    #[error("the image does not have a resolution")]
-    ImageWithoutResolution,
+    #[error("the FragmentBytes does not have a resolution")]
+    FragmentBytesWithoutResolution,
     #[error("the palette data doesn't end with 0s")]
     PaletteDontEndWithZero,
     #[error("a reference to a color in a palette would overflow")]
@@ -45,8 +45,8 @@ pub enum WanError {
     OverflowAddition(u64, u64, &'static str, &'static str),
     #[error("the resolution of a sprite is too small accept all it's pixel")]
     SpriteTooSmall,
-    #[error("an image doesn't have a constant depth index")]
-    NonConstantIndexInImage,
+    #[error("an FragmentBytes doesn't have a constant depth index")]
+    NonConstantIndexInFragmentBytes,
     #[error("The pointer to {0} is reference content after the end of the file")]
     PostFilePointer(&'static str),
     #[error("The resolution indices are invalid ({0} and {1})")]

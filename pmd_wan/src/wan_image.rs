@@ -2,7 +2,7 @@ use crate::{
     encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
     Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, FragmentResolution, Frame,
 };
-use crate::{FragmentStore, FrameStore, Palette, SpriteType, WanError};
+use crate::{FragmentBytesStore, FrameStore, Palette, SpriteType, WanError};
 
 use anyhow::Context;
 use binread::BinReaderExt;
@@ -14,8 +14,8 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 #[derive(PartialEq, Eq, Debug)]
 pub struct WanImage {
-    pub fragment_store: FragmentStore,
-    pub frames_store: FrameStore,
+    pub fragment_bytes_store: FragmentBytesStore,
+    pub frame_store: FrameStore,
     pub anim_store: AnimationStore,
     pub palette: Palette,
     /// true if the picture have 256 color, false if it only have 16
@@ -30,8 +30,8 @@ impl WanImage {
     /// Create an empty 16 color sprite for the given [`SpriteType`]
     pub fn new(sprite_type: SpriteType) -> Self {
         Self {
-            fragment_store: FragmentStore::default(),
-            frames_store: FrameStore::default(),
+            fragment_bytes_store: FragmentBytesStore::default(),
+            frame_store: FrameStore::default(),
             anim_store: AnimationStore::default(),
             palette: Palette::default(),
             is_256_color: false,
@@ -154,7 +154,7 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let fragment_store = FragmentStore::new_from_bytes(&mut file, amount_images as u32)?;
+        let fragment_store = FragmentBytesStore::new_from_bytes(&mut file, amount_images as u32)?;
 
         // decode animation
         let (anim_store, particule_table_end) = AnimationStore::new(
@@ -176,8 +176,8 @@ impl WanImage {
         }
 
         Ok(WanImage {
-            fragment_store,
-            frames_store,
+            fragment_bytes_store: fragment_store,
+            frame_store: frames_store,
             anim_store,
             palette,
             is_256_color,
@@ -227,7 +227,7 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
         let (fragments_references, size_to_allocate_for_max_frame) =
-            self.frames_store.write(file)?;
+            self.frame_store.write(file)?;
 
         trace!(
             "start of the animation offset: {}",
@@ -245,7 +245,7 @@ impl WanImage {
         );
 
         let (image_offset, sir0_pointer_images) =
-            self.fragment_store.write(file, &self.compression)?;
+            self.fragment_bytes_store.write(file, &self.compression)?;
 
         for pointer in sir0_pointer_images {
             sir0_offsets.push(pointer as u32);
@@ -276,7 +276,7 @@ impl WanImage {
                 "start of the frame offsets: {}",
                 file.seek(SeekFrom::Current(0))?
             );
-            for frame in &self.frames_store.frames {
+            for frame in &self.frame_store.frames {
                 if let Some(frame_offset) = frame.frame_offset.as_ref() {
                     frame_offset
                         .write(file)
@@ -353,7 +353,7 @@ impl WanImage {
             0u16,
             if self.is_256_color { 1u16 } else { 0u16 },
             self.unk2,
-            self.fragment_store.len() as u16,
+            self.fragment_bytes_store.len() as u16,
         )
             .write_options(file, &opt_le)?;
 
@@ -404,14 +404,14 @@ impl WanImage {
         fragment: &Fragment,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, FragmentBytesToImageError> {
         let image_bytes = match self
-            .fragment_store
+            .fragment_bytes_store
             .fragment_bytes
-            .get(fragment.image_bytes_index)
+            .get(fragment.fragment_bytes_index)
         {
             Some(b) => b,
             None => {
-                return Err(FragmentBytesToImageError::NoImageBytes(
-                    fragment.image_bytes_index,
+                return Err(FragmentBytesToImageError::NoFragmentBytes(
+                    fragment.fragment_bytes_index,
                 ))
             }
         };
@@ -421,7 +421,7 @@ impl WanImage {
 
     pub fn fix_empty_frames(&mut self) {
         let collected: Vec<&mut Frame> = self
-            .frames_store
+            .frame_store
             .frames
             .iter_mut()
             .filter(|x| (*x).fragments.is_empty())
@@ -429,9 +429,9 @@ impl WanImage {
         if collected.is_empty() {
             return;
         }
-        let image_bytes_index = self.fragment_store.fragment_bytes.len();
+        let image_bytes_index = self.fragment_bytes_store.fragment_bytes.len();
         let resolution = FragmentResolution { x: 8, y: 8 };
-        self.fragment_store.fragment_bytes.push(FragmentBytes {
+        self.fragment_bytes_store.fragment_bytes.push(FragmentBytes {
             // no panic: We guarantee input parameters are valid
             mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
             z_index: 0,
@@ -441,7 +441,7 @@ impl WanImage {
                 unk1: 0,
                 unk3_4: None,
                 unk5: false,
-                image_bytes_index,
+                fragment_bytes_index: image_bytes_index,
                 offset_y: 0,
                 offset_x: 0,
                 flip: FragmentFlip::Standard,

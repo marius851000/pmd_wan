@@ -14,10 +14,10 @@ pub struct Frame {
 impl Frame {
     pub fn new_from_bytes<F: Read>(file: &mut F) -> Result<Frame, WanError> {
         let mut fragments = Vec::new();
-        let mut previous_image = None;
+        let mut previous_fragment_bytes = None;
         loop {
-            let (fragment, is_last) = Fragment::new_from_bytes(file, previous_image)?;
-            previous_image = Some(fragment.image_bytes_index);
+            let (fragment, is_last) = Fragment::new_from_bytes(file, previous_fragment_bytes)?;
+            previous_fragment_bytes = Some(fragment.fragment_bytes_index);
             fragments.push(fragment);
             trace!("its data: {:?}", fragments[fragments.len() - 1]);
             if is_last {
@@ -30,25 +30,25 @@ impl Frame {
         })
     }
 
-    /// Returns: size to allocate for this image
+    /// Returns: size to allocate for the fragments of this frame
     pub fn write<F: Write>(&self, file: &mut F) -> anyhow::Result<u16> {
-        let mut previous_image_bytes: Option<usize> = None;
+        let mut previous_fragment_bytes: Option<usize> = None;
         if self.fragments.is_empty() {
             bail!("A frame has no fragment, which can’t be encoded.");
         }
-        let mut image_alloc_counter = 0;
+        let mut fragment_alloc_counter = 0;
         for (fragment_nb, fragment) in self.fragments.iter().enumerate() {
             fragment
                 .write(
                     file,
-                    previous_image_bytes,
+                    previous_fragment_bytes,
                     fragment_nb + 1 == self.fragments.len(),
-                    image_alloc_counter,
+                    fragment_alloc_counter,
                 )
                 .with_context(move || format!("Can't write the fragment {:?}", fragment))?;
-            image_alloc_counter += fragment.resolution.chunk_to_allocate_for_fragment();
-            previous_image_bytes = Some(fragment.image_bytes_index);
+            fragment_alloc_counter += fragment.resolution.chunk_to_allocate_for_fragment();
+            previous_fragment_bytes = Some(fragment.fragment_bytes_index);
         }
-        Ok(image_alloc_counter)
+        Ok(fragment_alloc_counter)
     }
 }

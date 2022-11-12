@@ -53,7 +53,7 @@ mod tests {
             inserted_frame
         );
         assert_eq!(
-            decoded_wanimage.frames_store.frames[frame_id as usize]
+            decoded_wanimage.frame_store.frames[frame_id as usize]
                 .fragments
                 .len(),
             3

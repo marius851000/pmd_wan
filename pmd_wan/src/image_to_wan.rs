@@ -186,8 +186,8 @@ pub fn insert_frame_in_wanimage(
     };
 
     Ok(if !fragments.is_empty() {
-        let frame_id = wanimage.frames_store.frames.len();
-        wanimage.frames_store.frames.push(Frame {
+        let frame_id = wanimage.frame_store.frames.len();
+        wanimage.frame_store.frames.push(Frame {
             fragments,
             frame_offset: None,
         });
@@ -245,8 +245,8 @@ fn insert_fragment_pos_in_wan_image(
             let buffer_to_write =
                 cut_section.get_fragment(0, 0, fragment_size.x as u16, fragment_size.y as u16, 0);
 
-            let image_bytes_index = wanimage.fragment_store.fragment_bytes.len();
-            wanimage.fragment_store.fragment_bytes.push(FragmentBytes {
+            let image_bytes_index = wanimage.fragment_bytes_store.fragment_bytes.len();
+            wanimage.fragment_bytes_store.fragment_bytes.push(FragmentBytes {
                 mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
                     .context("failed to encode the input byte. This is an internal error")?,
                 z_index: 1,
@@ -257,7 +257,7 @@ fn insert_fragment_pos_in_wan_image(
                 unk1: 0,
                 unk3_4: None,
                 unk5: false,
-                image_bytes_index,
+                fragment_bytes_index: image_bytes_index,
                 offset_y,
                 offset_x: fragment_x.try_into().context("The image is too high")?,
                 flip: FragmentFlip::Standard,
@@ -357,7 +357,7 @@ fn insert_frame_flat_test() {
     let frame_id = insert_frame_in_wanimage(vec![1; 36], 6, 6, &mut wanimage, 0)
         .unwrap()
         .unwrap();
-    let frame = &wanimage.frames_store.frames[frame_id];
+    let frame = &wanimage.frame_store.frames[frame_id];
     let fragment = &frame.fragments[0];
     assert_eq!(fragment.resolution, FragmentResolution { x: 8, y: 8 });
     assert_eq!(fragment.pal_idx, 0);

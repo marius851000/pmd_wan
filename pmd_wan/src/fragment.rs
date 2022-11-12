@@ -7,7 +7,7 @@ use byteorder::WriteBytesExt;
 use byteorder::{ReadBytesExt, LE};
 use std::io::{Read, Write};
 
-/// A [`Fragment`] may reference an [`crate::ImageBytes`], that will form a single (or all if small enought) part of an [`crate::Frame`]
+/// A [`Fragment`] may reference an [`crate::FragmentBytes`], that will form a single (or all if small enought) part of an [`crate::Frame`]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Fragment {
     pub unk1: u16,
@@ -16,7 +16,7 @@ pub struct Fragment {
     /// otherwise the two boolean in the tuple will be used
     pub unk3_4: Option<(bool, bool)>,
     pub unk5: bool, // maybe is "invert palette color"
-    pub image_bytes_index: usize,
+    pub fragment_bytes_index: usize,
     pub offset_y: i8,
     pub offset_x: i16,
     pub flip: FragmentFlip,
@@ -30,12 +30,12 @@ impl Fragment {
     /// The second value is whether the "is_last" bit has been set to true, meaning it's the last Fragment from the Frame
     pub fn new_from_bytes<F: Read>(
         file: &mut F,
-        previous_image: Option<usize>,
+        previous_fragment_bytes: Option<usize>,
     ) -> Result<(Fragment, bool), WanError> {
         trace!("parsing a fragment");
-        let image_bytes_index = match file.read_i16::<LE>()? {
-            -1 => match previous_image {
-                None => return Err(WanError::ImageIDPointBackButFirstImage),
+        let fragment_bytes_index = match file.read_i16::<LE>()? {
+            -1 => match previous_fragment_bytes {
+                None => return Err(WanError::FragmentBytesIDPointBackButFirstFragment),
                 Some(value) => value,
             },
             x => {
@@ -91,7 +91,7 @@ impl Fragment {
                 unk1,
                 unk3_4,
                 unk5,
-                image_bytes_index,
+                fragment_bytes_index,
                 offset_x,
                 offset_y,
                 flip,
@@ -114,29 +114,29 @@ impl Fragment {
     pub fn write<F: Write>(
         &self,
         file: &mut F,
-        previous_image_bytes: Option<usize>,
+        previous_fragment_bytes: Option<usize>,
         is_last: bool,
-        image_alloc_counter: u16,
+        fragment_alloc_counter: u16,
     ) -> anyhow::Result<()> {
         //TODO: use try_into, or maybe even directly i16
-        let image_index: i16 = match previous_image_bytes {
-            None => self.image_bytes_index as i16,
+        let fragment_bytes_index: i16 = match previous_fragment_bytes {
+            None => self.fragment_bytes_index as i16,
             Some(value) => {
-                if self.image_bytes_index == value {
+                if self.fragment_bytes_index == value {
                     -1
                 } else {
-                    self.image_bytes_index as i16
+                    self.fragment_bytes_index as i16
                 }
             }
         };
 
-        file.write_i16::<LE>(image_index)?;
+        file.write_i16::<LE>(fragment_bytes_index)?;
         file.write_u16::<LE>(self.unk1)?;
 
         let (size_indice_x, size_indice_y) = match self.resolution.get_indice() {
             Some(r) => r,
             None => bail!(
-                "The resolution {:?} for an image can't be transformed into indices",
+                "The resolution {:?} for a fragment can't be transformed into indices",
                 self.resolution
             ),
         };
@@ -181,7 +181,7 @@ impl Fragment {
         file.write_u16::<LE>(offset_y_data)?;
         file.write_u16::<LE>(offset_x_data)?;
         file.write_u16::<LE>(
-            ((self.pal_idx & 0xF) << 12) + 0x0C00 + (image_alloc_counter & 0x3FF),
+            ((self.pal_idx & 0xF) << 12) + 0x0C00 + (fragment_alloc_counter & 0x3FF),
         )?;
 
         Ok(())

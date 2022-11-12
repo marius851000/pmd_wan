@@ -35,7 +35,7 @@ mod palette;
 pub use palette::Palette;
 
 mod image_store;
-pub use image_store::FragmentStore;
+pub use image_store::FragmentBytesStore;
 
 mod animation_frame;
 pub use animation_frame::AnimationFrame;
