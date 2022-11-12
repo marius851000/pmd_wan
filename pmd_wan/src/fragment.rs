@@ -76,8 +76,8 @@ impl Fragment {
 
         let offset_x_data = file.read_u16::<LE>()?;
         let size_indice_x = ((0xC000 & offset_x_data) >> (8 + 6)) as u8;
-        let v_flip = get_bit_u16(offset_x_data, 2).unwrap(); //as no panic as before
-        let h_flip = get_bit_u16(offset_x_data, 3).unwrap();
+        let h_flip = get_bit_u16(offset_x_data, 2).unwrap(); //as no panic as before
+        let v_flip = get_bit_u16(offset_x_data, 3).unwrap();
         let flip = FragmentFlip::from_bools(v_flip, h_flip);
         let is_last = get_bit_u16(offset_x_data, 4).unwrap();
         let unk5 = get_bit_u16(offset_x_data, 5).unwrap();
