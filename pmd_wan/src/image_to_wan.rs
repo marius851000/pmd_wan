@@ -246,11 +246,16 @@ fn insert_fragment_pos_in_wan_image(
                 cut_section.get_fragment(0, 0, fragment_size.x as u16, fragment_size.y as u16, 0);
 
             let image_bytes_index = wanimage.fragment_bytes_store.fragment_bytes.len();
-            wanimage.fragment_bytes_store.fragment_bytes.push(FragmentBytes {
-                mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
-                    .context("failed to encode the input byte. This is an internal error")?,
-                z_index: 1,
-            });
+            wanimage
+                .fragment_bytes_store
+                .fragment_bytes
+                .push(FragmentBytes {
+                    mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
+                        .context(
+                        "failed to encode the input byte. This is an internal error",
+                    )?,
+                    z_index: 1,
+                });
 
             let offset_y = fragment_y.try_into().context("The image is too large")?;
             fragments.push(Fragment {

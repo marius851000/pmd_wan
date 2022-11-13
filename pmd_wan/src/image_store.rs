@@ -26,7 +26,11 @@ impl FragmentBytesStore {
         let mut fragment_bytes = Vec::new();
 
         for (fragment_bytes_id, fragment_bytes_addr) in fragment_bytes_pointers.iter().enumerate() {
-            trace!("reading FragmentBytes n°{} at {}", fragment_bytes_id, fragment_bytes_addr);
+            trace!(
+                "reading FragmentBytes n°{} at {}",
+                fragment_bytes_id,
+                fragment_bytes_addr
+            );
             file.seek(SeekFrom::Start(*fragment_bytes_addr))?;
             let img = FragmentBytes::new_from_bytes(file)?;
             fragment_bytes.push(img);
@@ -56,7 +60,8 @@ impl FragmentBytesStore {
                 "fragment bytes wrote at {}",
                 file.seek(SeekFrom::Current(0))?
             );
-            let (assembly_table_offset, sir0_img_pointer) = fragment_bytes.write(file, compression)?;
+            let (assembly_table_offset, sir0_img_pointer) =
+                fragment_bytes.write(file, compression)?;
             for pointer in sir0_img_pointer {
                 sir0_pointer_fragments_bytes.push(pointer)
             }

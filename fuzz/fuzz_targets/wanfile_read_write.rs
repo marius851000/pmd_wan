@@ -11,12 +11,12 @@ fuzz_target!(|data: &[u8]| {
     match decoded {
         Err(_) => (),
         Ok(mut valid) => {
-            valid.anim_store.copied_on_previous = None;
+            valid.animation_store.copied_on_previous = None;
             let mut reread_file = Cursor::new(Vec::new());
             valid.create_wan(&mut reread_file).unwrap();
             reread_file.seek(SeekFrom::Start(0)).unwrap();
             let mut reread_wan = pmd_wan::WanImage::decode_wan(reread_file).unwrap();
-            reread_wan.anim_store.copied_on_previous = None;
+            reread_wan.animation_store.copied_on_previous = None;
             //TODO: ensure this hold true every time
             //assert_eq!(valid, reread_wan);
         }

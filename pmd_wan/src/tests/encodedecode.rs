@@ -39,7 +39,7 @@ mod tests {
             shadow_offset_x: 0,
             shadow_offset_y: 10,
         };
-        wanimage.anim_store.anim_groups.push(vec![Animation {
+        wanimage.animation_store.anim_groups.push(vec![Animation {
             frames: vec![inserted_frame.clone()],
         }]);
 
@@ -49,7 +49,7 @@ mod tests {
         let decoded_wanimage = WanImage::decode_wan(&mut wan_cursor).unwrap();
         assert_eq!(decoded_wanimage.palette.palette, palette_data.ordered);
         assert_eq!(
-            decoded_wanimage.anim_store.anim_groups[0][0].frames[0],
+            decoded_wanimage.animation_store.anim_groups[0][0].frames[0],
             inserted_frame
         );
         assert_eq!(

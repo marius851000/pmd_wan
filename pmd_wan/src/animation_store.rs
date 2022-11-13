@@ -26,28 +26,28 @@ impl AnimationStore {
     ) -> Result<(AnimationStore, u64), WanError> {
         //TODO: rewrite this function, it seem to be too complicated to understand
         file.seek(SeekFrom::Start(pointer_animation_groups_table))?;
-        let mut anim_group_entry: Vec<Option<AnimationGroupEntry>> = Vec::new();
+        let mut animation_group_entry: Vec<Option<AnimationGroupEntry>> = Vec::new();
         for animation_group_id in 0..amount_animation_group {
             let pointer = file.read_u32::<LE>()?;
             let length = file.read_u32::<LE>()?;
             if pointer != 0 && length != 0 {
-                anim_group_entry.push(Some(AnimationGroupEntry {
+                animation_group_entry.push(Some(AnimationGroupEntry {
                     pointer,
                     group_lenght: length,
                     id: animation_group_id,
                 }));
             } else {
-                anim_group_entry.push(None);
+                animation_group_entry.push(None);
             }
         }
 
-        let mut anim_groups: Vec<Option<Vec<u64>>> = Vec::new();
+        let mut animation_groups: Vec<Option<Vec<u64>>> = Vec::new();
         let mut particule_table_end = None;
-        for anim_group_option in anim_group_entry {
-            match anim_group_option {
-                None => anim_groups.push(None),
-                Some(anim_group) => {
-                    file.seek(SeekFrom::Start(anim_group.pointer as u64))?;
+        for animation_group_option in animation_group_entry {
+            match animation_group_option {
+                None => animation_groups.push(None),
+                Some(animation_group) => {
+                    file.seek(SeekFrom::Start(animation_group.pointer as u64))?;
                     match particule_table_end {
                         Some(value) => {
                             if file.seek(SeekFrom::Current(0))? < value {
@@ -57,16 +57,16 @@ impl AnimationStore {
                         None => particule_table_end = Some(file.seek(SeekFrom::Current(0))?),
                     };
 
-                    let mut anim_ref = Vec::new();
-                    for _ in 0..anim_group.group_lenght {
-                        anim_ref.push(file.read_u32::<LE>()? as u64);
+                    let mut animation_ref = Vec::new();
+                    for _ in 0..animation_group.group_lenght {
+                        animation_ref.push(file.read_u32::<LE>()? as u64);
                     }
                     trace!(
                         "reading an animation group entry, id is {}, the pointer is {:?}",
-                        anim_group.id,
-                        anim_ref
+                        animation_group.id,
+                        animation_ref
                     );
-                    anim_groups.push(Some(anim_ref));
+                    animation_groups.push(Some(animation_ref));
                 }
             };
         }
@@ -81,12 +81,12 @@ impl AnimationStore {
         let mut anim_groups_result = Vec::new();
         let mut check_last_anim_pos = 0;
 
-        for anim_group in anim_groups {
-            match anim_group {
+        for animation_group in animation_groups {
+            match animation_group {
                 None => anim_groups_result.push(Vec::new()),
-                Some(anim_group_table) => {
+                Some(animation_group_table) => {
                     let mut animation_in_group = Vec::new();
-                    for animation in anim_group_table {
+                    for animation in animation_group_table {
                         file.seek(SeekFrom::Start(animation))?;
                         copied_on_previous
                             .push(file.seek(SeekFrom::Current(0))? == check_last_anim_pos);

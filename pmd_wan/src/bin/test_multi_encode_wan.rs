@@ -61,7 +61,7 @@ pub fn main() {
         })
     }
 
-    wan_image.anim_store.anim_groups = vec![vec![Animation {
+    wan_image.animation_store.anim_groups = vec![vec![Animation {
         frames: animation_frames,
     }]];
 

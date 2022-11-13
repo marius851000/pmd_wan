@@ -300,11 +300,14 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             // TODO: this is mostly copy–pasted from the process_resolution function
             // add the bytes
             let image_bytes_index = s.wan.fragment_bytes_store.len();
-            s.wan.fragment_bytes_store.fragment_bytes.push(FragmentBytes {
-                mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
-                    .unwrap(),
-                z_index: 0,
-            });
+            s.wan
+                .fragment_bytes_store
+                .fragment_bytes
+                .push(FragmentBytes {
+                    mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
+                        .unwrap(),
+                    z_index: 0,
+                });
             // and their usage
             for usage in use_of_this_byte {
                 let frame = &mut s.wan.frame_store.frames[usage.image_id as usize];
@@ -427,14 +430,17 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     // Yay, we found a bunch of big fragment we can finally push that to Wan
                     // push the bytes
                     let image_bytes_index = self.wan.fragment_bytes_store.len();
-                    self.wan.fragment_bytes_store.fragment_bytes.push(FragmentBytes {
-                        mixed_pixels: encode_fragment_pixels(
-                            &base_bigger_fragment.unwrap().0,
-                            resolution,
-                        )
-                        .unwrap(),
-                        z_index: 0,
-                    });
+                    self.wan
+                        .fragment_bytes_store
+                        .fragment_bytes
+                        .push(FragmentBytes {
+                            mixed_pixels: encode_fragment_pixels(
+                                &base_bigger_fragment.unwrap().0,
+                                resolution,
+                            )
+                            .unwrap(),
+                            z_index: 0,
+                        });
                     // and their usage
                     for (position, flip) in all_big_fragment {
                         self.wan.frame_store.frames[position.image_id as usize]

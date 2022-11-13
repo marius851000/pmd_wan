@@ -7,7 +7,9 @@ pub enum WanError {
     IOError(#[from] io::Error),
     #[error("an input error happened with binread")]
     BinReadError(#[from] binread::Error),
-    #[error("an fragment’s FragmentBytes id reference the previous one, but it is the first Fragment")]
+    #[error(
+        "an fragment’s FragmentBytes id reference the previous one, but it is the first Fragment"
+    )]
     FragmentBytesIDPointBackButFirstFragment,
     #[error("a metaframe is inferior to -1, but that is not valid (it is {0})")]
     FragmentLessThanLessOne(i16),

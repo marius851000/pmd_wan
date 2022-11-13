@@ -16,7 +16,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 pub struct WanImage {
     pub fragment_bytes_store: FragmentBytesStore,
     pub frame_store: FrameStore,
-    pub anim_store: AnimationStore,
+    pub animation_store: AnimationStore,
     pub palette: Palette,
     /// true if the picture have 256 color, false if it only have 16
     pub is_256_color: bool,
@@ -32,7 +32,7 @@ impl WanImage {
         Self {
             fragment_bytes_store: FragmentBytesStore::default(),
             frame_store: FrameStore::default(),
-            anim_store: AnimationStore::default(),
+            animation_store: AnimationStore::default(),
             palette: Palette::default(),
             is_256_color: false,
             sprite_type,
@@ -178,7 +178,7 @@ impl WanImage {
         Ok(WanImage {
             fragment_bytes_store: fragment_store,
             frame_store: frames_store,
-            anim_store,
+            animation_store: anim_store,
             palette,
             is_256_color,
             sprite_type,
@@ -233,7 +233,7 @@ impl WanImage {
             "start of the animation offset: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let animations_pointer = self.anim_store.write(file)?;
+        let animations_pointer = self.animation_store.write(file)?;
 
         while file.seek(SeekFrom::Current(0))? % 4 != 0 {
             file.write_all(&[0xAA])?;
@@ -296,7 +296,7 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
         let (animation_group_reference_offset, sir0_animation_pointer) = self
-            .anim_store
+            .animation_store
             .write_animation_group(file, &animations_pointer)
             .context("failed to write animations groups")?;
         for pointer in sir0_animation_pointer {
@@ -333,7 +333,7 @@ impl WanImage {
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
         file.write_u32::<LE>(animation_group_reference_offset as u32)?;
 
-        file.write_u16::<LE>(self.anim_store.anim_groups.len() as u16)?;
+        file.write_u16::<LE>(self.animation_store.anim_groups.len() as u16)?;
 
         file.write_u32::<LE>(size_to_allocate_for_max_frame as u32)?;
         file.write_all(&[0; 6])?;
@@ -431,11 +431,13 @@ impl WanImage {
         }
         let image_bytes_index = self.fragment_bytes_store.fragment_bytes.len();
         let resolution = FragmentResolution { x: 8, y: 8 };
-        self.fragment_bytes_store.fragment_bytes.push(FragmentBytes {
-            // no panic: We guarantee input parameters are valid
-            mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
-            z_index: 0,
-        });
+        self.fragment_bytes_store
+            .fragment_bytes
+            .push(FragmentBytes {
+                // no panic: We guarantee input parameters are valid
+                mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
+                z_index: 0,
+            });
         for empty_frame in collected {
             empty_frame.fragments.push(Fragment {
                 unk1: 0,

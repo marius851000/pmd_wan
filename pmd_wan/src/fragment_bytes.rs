@@ -13,7 +13,9 @@ pub enum FragmentBytesToImageError {
     ZeroSizedImage,
     #[error("The image can't be created. The resolution is likely too big compared the size of this FragmentBytes")]
     CantCreateImage,
-    #[error("The color with the id {0} on the palette with the id {1} doesn't exist in the palette")]
+    #[error(
+        "The color with the id {0} on the palette with the id {1} doesn't exist in the palette"
+    )]
     UnknownColor(u8, u16),
     #[error("The metaframe point to the FragmentBytes {0}, which doesn't exist")]
     NoFragmentBytes(usize),
