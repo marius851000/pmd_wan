@@ -155,7 +155,7 @@ mod tests {
                 x: -7,
                 y: -7,
                 image_id: 0,
-                flip: FragmentFlip::Standard
+                flip: FragmentFlip::standard()
             }));
         assert!(found
             .collected
@@ -165,7 +165,7 @@ mod tests {
                 x: -7,
                 y: 3,
                 image_id: 0,
-                flip: FragmentFlip::FlipHorizontal
+                flip: FragmentFlip::horizontal()
             }));
         assert_eq!(found.collected.get(&fragment_first).unwrap().len(), 2);
     }

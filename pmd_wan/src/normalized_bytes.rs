@@ -9,21 +9,21 @@ impl NormalizedBytes {
     pub fn new(bytes: [u8; 64]) -> (Self, FragmentFlip) {
         let mut cache = [[0; 64]; 3];
         let fragment_resolution = FragmentResolution::new(8, 8);
-        (FragmentFlip::FlipHorizontal)
+        (FragmentFlip::horizontal())
             .apply(&bytes, fragment_resolution, &mut cache[0])
             .unwrap();
-        (FragmentFlip::FlipVertical)
+        (FragmentFlip::vertical())
             .apply(&bytes, fragment_resolution, &mut cache[1])
             .unwrap();
-        (FragmentFlip::FlipBoth)
+        (FragmentFlip::both())
             .apply(&bytes, fragment_resolution, &mut cache[2])
             .unwrap();
         let mut smallest = &bytes;
-        let mut smallest_flip = FragmentFlip::Standard;
+        let mut smallest_flip = FragmentFlip::standard();
         for (other_buffer, other_flip) in [
-            (&cache[0], FragmentFlip::FlipHorizontal),
-            (&cache[1], FragmentFlip::FlipVertical),
-            (&cache[2], FragmentFlip::FlipBoth),
+            (&cache[0], FragmentFlip::horizontal()),
+            (&cache[1], FragmentFlip::vertical()),
+            (&cache[2], FragmentFlip::both()),
         ] {
             if other_buffer < smallest {
                 smallest = other_buffer;
@@ -43,21 +43,21 @@ impl VariableNormalizedBytes {
         let mut flip_vertical = vec![0; base.len()];
         let mut flip_horizontal = vec![0; base.len()];
         let mut flip_both = vec![0; base.len()];
-        (FragmentFlip::FlipHorizontal)
+        (FragmentFlip::horizontal())
             .apply(base, resolution, &mut flip_horizontal)
             .unwrap();
-        (FragmentFlip::FlipVertical)
+        (FragmentFlip::vertical())
             .apply(base, resolution, &mut flip_vertical)
             .unwrap();
-        (FragmentFlip::FlipBoth)
+        (FragmentFlip::both())
             .apply(base, resolution, &mut flip_both)
             .unwrap();
         let mut smallest = base;
-        let mut smallest_flip = FragmentFlip::Standard;
+        let mut smallest_flip = FragmentFlip::standard();
         for (other_buffer, other_flip) in [
-            (&flip_horizontal, FragmentFlip::FlipHorizontal),
-            (&flip_vertical, FragmentFlip::FlipVertical),
-            (&flip_both, FragmentFlip::FlipBoth),
+            (&flip_horizontal, FragmentFlip::horizontal()),
+            (&flip_vertical, FragmentFlip::vertical()),
+            (&flip_both, FragmentFlip::both()),
         ] {
             if other_buffer < smallest {
                 smallest = other_buffer;
@@ -83,10 +83,10 @@ mod tests {
         let mut fliphor = [0; 64];
         fliphor[7] = 1;
         for (bytes, flip) in [
-            (base, FragmentFlip::Standard),
-            (flipboth, FragmentFlip::FlipBoth),
-            (flipvert, FragmentFlip::FlipVertical),
-            (fliphor, FragmentFlip::FlipHorizontal),
+            (base, FragmentFlip::standard()),
+            (flipboth, FragmentFlip::both()),
+            (flipvert, FragmentFlip::vertical()),
+            (fliphor, FragmentFlip::horizontal()),
         ] {
             assert_eq!(NormalizedBytes::new(bytes), (NormalizedBytes(base), flip));
         }

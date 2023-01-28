@@ -2,6 +2,11 @@ use thiserror::Error;
 
 use crate::FragmentResolution;
 
+pub const FLIP_STANDARD: FragmentFlip = FragmentFlip::standard();
+pub const FLIP_VERTICAL: FragmentFlip = FragmentFlip::vertical();
+pub const FLIP_HORIZONTAL: FragmentFlip = FragmentFlip::horizontal();
+pub const FLIP_BOTH: FragmentFlip = FragmentFlip::both();
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum FragmentFlipError {
     #[error("Incoherent resolution")]
@@ -9,14 +14,32 @@ pub enum FragmentFlipError {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, PartialOrd, Ord)]
-pub enum FragmentFlip {
-    Standard,
-    FlipHorizontal,
-    FlipVertical,
-    FlipBoth,
+pub struct FragmentFlip {
+    pub flip_h: bool,
+    pub flip_v: bool,
 }
 
 impl FragmentFlip {
+    #[inline(always)]
+    pub const fn standard() -> Self {
+        Self::from_bools(false, false)
+    }
+
+    #[inline(always)]
+    pub const fn vertical() -> Self {
+        Self::from_bools(true, false)
+    }
+
+    #[inline(always)]
+    pub const fn horizontal() -> Self {
+        Self::from_bools(false, true)
+    }
+
+    #[inline(always)]
+    pub const fn both() -> Self {
+        Self::from_bools(true, true)
+    }
+
     /// Flip a tile with the corresponding flip value
     /// source and target are image using an u8 per pixel, row by row, from top-left most to bottom-right.
     /// target and source should have the correct number of pixel. Otherwise, and error is returned.
@@ -35,11 +58,11 @@ impl FragmentFlip {
             return Ok(());
         };
         match self {
-            Self::Standard => {
+            FLIP_STANDARD => {
                 // no panic: both have the number of pixels corresponding to the resolution
                 target.copy_from_slice(source);
             }
-            Self::FlipHorizontal => {
+            FLIP_HORIZONTAL => {
                 // no panic: checked for 0 pixel list before. To have at least one pixel, x should be at least one
                 for (source_chunk, target_chunk) in source
                     .chunks_exact(resolution.x as usize)
@@ -48,7 +71,7 @@ impl FragmentFlip {
                     target_chunk.copy_from_slice(source_chunk);
                 }
             }
-            Self::FlipVertical => {
+            FLIP_VERTICAL => {
                 // no panic: as before
                 for (source_chunk, target_chunk) in source
                     .chunks_exact(resolution.x as usize)
@@ -58,7 +81,7 @@ impl FragmentFlip {
                         .copy_from_slice(&source_chunk.iter().copied().rev().collect::<Vec<u8>>());
                 }
             }
-            Self::FlipBoth => {
+            FLIP_BOTH => {
                 target.copy_from_slice(&source.iter().copied().rev().collect::<Vec<u8>>());
             }
         };
@@ -67,39 +90,21 @@ impl FragmentFlip {
 
     /// Return the [`FragmentFlip`] that would result in this flip applied to another one
     pub fn flipped_fragment(self, other: FragmentFlip) -> FragmentFlip {
-        match (self, other) {
-            (Self::Standard, x) => x,
-            (x, Self::Standard) => x,
-            (Self::FlipHorizontal, Self::FlipHorizontal) => Self::Standard,
-            (Self::FlipVertical, Self::FlipVertical) => Self::Standard,
-            (Self::FlipBoth, Self::FlipBoth) => Self::Standard,
-            (Self::FlipHorizontal, Self::FlipVertical) => Self::FlipBoth,
-            (Self::FlipVertical, Self::FlipHorizontal) => Self::FlipBoth,
-            (Self::FlipBoth, Self::FlipHorizontal) => Self::FlipVertical,
-            (Self::FlipBoth, Self::FlipVertical) => Self::FlipHorizontal,
-            (Self::FlipHorizontal, Self::FlipBoth) => Self::FlipVertical,
-            (Self::FlipVertical, Self::FlipBoth) => Self::FlipHorizontal,
+        Self {
+            flip_h: self.flip_h ^ other.flip_h,
+            flip_v: self.flip_v ^ other.flip_v
         }
     }
 
     /// Return a pair of boolean. First boolean tell if it should be vertically flipped, second one if it should be horizontally flipped
-    pub fn to_bools(self) -> (bool, bool) {
-        match self {
-            Self::Standard => (false, false),
-            Self::FlipVertical => (true, false),
-            Self::FlipHorizontal => (false, true),
-            Self::FlipBoth => (true, true),
-        }
+    pub const fn to_bools(self) -> (bool, bool) {
+        (self.flip_v, self.flip_h)
     }
 
     /// Return the corresponding [`FragmentFlip`]. First boolean for vertical flip, second boolean for horizontal flip.
-    pub fn from_bools(flip_v: bool, flip_h: bool) -> FragmentFlip {
-        match (flip_v, flip_h) {
-            (false, false) => Self::Standard,
-            (true, false) => Self::FlipVertical,
-            (false, true) => Self::FlipHorizontal,
-            (true, true) => Self::FlipBoth,
-        }
+    #[inline(always)]
+    pub const fn from_bools(flip_v: bool, flip_h: bool) -> FragmentFlip {
+        Self { flip_h, flip_v }
     }
 }
 
@@ -112,12 +117,12 @@ mod tests {
         let test_data_4x4 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4, 3, 2, 1];
         let resolution = FragmentResolution::new(4, 4);
         let mut target_4x4 = [0; 16];
-        (FragmentFlip::Standard)
+        (FragmentFlip::standard())
             .apply(&test_data_4x4, resolution, &mut target_4x4)
             .unwrap();
         assert_eq!(target_4x4, test_data_4x4);
 
-        (FragmentFlip::FlipHorizontal)
+        (FragmentFlip::horizontal())
             .apply(&test_data_4x4, resolution, &mut target_4x4)
             .unwrap();
         assert_eq!(
@@ -125,7 +130,7 @@ mod tests {
             [4, 3, 2, 1, 8, 9, 10, 11, 4, 5, 6, 7, 0, 1, 2, 3]
         );
 
-        (FragmentFlip::FlipVertical)
+        (FragmentFlip::vertical())
             .apply(&test_data_4x4, resolution, &mut target_4x4)
             .unwrap();
         assert_eq!(
@@ -135,7 +140,7 @@ mod tests {
 
         let mut target_3x3 = [0; 9];
         let test_data_3x3 = [3, 2, 1, 14, 13, 12, 5, 2, 6];
-        (FragmentFlip::FlipBoth)
+        (FragmentFlip::both())
             .apply(
                 &test_data_3x3,
                 FragmentResolution::new(3, 3),
@@ -145,7 +150,7 @@ mod tests {
         assert_eq!(target_3x3, [6, 2, 5, 12, 13, 14, 1, 2, 3]);
 
         assert_eq!(
-            (FragmentFlip::FlipVertical).apply(
+            (FragmentFlip::vertical()).apply(
                 &test_data_4x4,
                 FragmentResolution::new(3, 3),
                 &mut target_3x3
@@ -154,7 +159,7 @@ mod tests {
         );
 
         assert_eq!(
-            (FragmentFlip::FlipVertical).apply(
+            (FragmentFlip::vertical()).apply(
                 &test_data_3x3,
                 FragmentResolution::new(3, 3),
                 &mut target_4x4
@@ -162,7 +167,7 @@ mod tests {
             Err(FragmentFlipError::IncoherentResolution)
         );
 
-        (FragmentFlip::FlipVertical)
+        (FragmentFlip::vertical())
             .apply(
                 &test_data_4x4,
                 FragmentResolution::new(2, 8),
@@ -179,10 +184,10 @@ mod tests {
     #[test]
     fn fragment_flip_convert_to_from_boolean() {
         let expected = [
-            (FragmentFlip::Standard, (false, false)),
-            (FragmentFlip::FlipHorizontal, (false, true)),
-            (FragmentFlip::FlipVertical, (true, false)),
-            (FragmentFlip::FlipBoth, (true, true)),
+            (FragmentFlip::standard(), (false, false)),
+            (FragmentFlip::horizontal(), (false, true)),
+            (FragmentFlip::vertical(), (true, false)),
+            (FragmentFlip::both(), (true, true)),
         ];
         for (fragment_flip, boolean_flip) in &expected {
             assert_eq!(&fragment_flip.to_bools(), boolean_flip);

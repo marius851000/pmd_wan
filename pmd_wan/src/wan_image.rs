@@ -446,7 +446,7 @@ impl WanImage {
                 fragment_bytes_index: image_bytes_index,
                 offset_y: 0,
                 offset_x: 0,
-                flip: FragmentFlip::Standard,
+                flip: FragmentFlip::standard(),
                 is_mosaic: false,
                 pal_idx: 0,
                 resolution,

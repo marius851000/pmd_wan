@@ -265,7 +265,7 @@ fn insert_fragment_pos_in_wan_image(
                 fragment_bytes_index: image_bytes_index,
                 offset_y,
                 offset_x: fragment_x.try_into().context("The image is too high")?,
-                flip: FragmentFlip::Standard,
+                flip: FragmentFlip::standard(),
                 is_mosaic: false,
                 pal_idx: pal_id,
                 resolution: fragment_size,
