@@ -51,4 +51,9 @@ impl Frame {
         }
         Ok(fragment_alloc_counter)
     }
+
+    /// Returns: size to allocate for the fragments of this frame
+    pub fn compute_fragment_alloc_counter(&self) -> u16 {
+        self.fragments.iter().map(|f| f.resolution.chunk_to_allocate_for_fragment()).sum()
+    }
 }

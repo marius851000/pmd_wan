@@ -68,4 +68,9 @@ impl FrameStore {
 
         Ok((frame_references, size_to_allocate))
     }
+
+    /// Returns: max allocation size for a frame
+    pub fn compute_fragment_alloc_counter(&self) -> u16 {
+        self.frames.iter().map(|f| f.compute_fragment_alloc_counter()).max().unwrap_or(0)
+    }
 }
