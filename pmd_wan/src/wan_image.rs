@@ -22,7 +22,7 @@ pub struct WanImage {
     pub is_256_color: bool,
     pub sprite_type: SpriteType,
     pub unk2: u16,
-    /// How the imagebytes should be compressed
+    /// How the imagebytes should be compressed, only affect writing
     pub compression: CompressionMethod,
 }
 

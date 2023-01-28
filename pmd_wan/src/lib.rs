@@ -34,8 +34,8 @@ pub use crate::fragment_bytes::{
 mod palette;
 pub use palette::Palette;
 
-mod image_store;
-pub use image_store::FragmentBytesStore;
+mod fragment_bytes_store;
+pub use fragment_bytes_store::FragmentBytesStore;
 
 mod animation_frame;
 pub use animation_frame::AnimationFrame;
