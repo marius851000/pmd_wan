@@ -53,7 +53,7 @@ impl FragmentBytesAssemblyEntry {
     pub fn write<F: Write>(&self, file: &mut F) -> Result<(), WanError> {
         (
             self.pixel_src as u32,
-            self.byte_amount as u16,
+            self.byte_amount,
             0u16,
             self._z_index,
         )
@@ -124,7 +124,7 @@ impl FragmentBytes {
                 read_buffer.resize(entry.byte_amount as usize, 0);
                 file.read_exact(&mut read_buffer)?;
                 for pixel_pair in &read_buffer {
-                    mixed_pixels.extend(&[pixel_pair >> 4, pixel_pair & 0x0F]);
+                    mixed_pixels.extend([pixel_pair >> 4, pixel_pair & 0x0F]);
                 }
             };
             // check that all part of the image have the same z index

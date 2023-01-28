@@ -135,8 +135,8 @@ impl WanImage {
 
         let amount_fragments_raw = frames_end_pointer.checked_sub(pointer_frames_table).ok_or(
             WanError::OverflowSubstraction(
-                frames_end_pointer as u64,
-                pointer_frames_table as u64,
+                frames_end_pointer,
+                pointer_frames_table,
                 "meta frame reference end pointer",
                 "pointer meta frame reference table",
             ),
@@ -351,7 +351,7 @@ impl WanImage {
         (
             pointer_palette as u32,
             0u16,
-            if self.is_256_color { 1u16 } else { 0u16 },
+            u16::from(self.is_256_color),
             self.unk2,
             self.fragment_bytes_store.len() as u16,
         )
@@ -424,7 +424,7 @@ impl WanImage {
             .frame_store
             .frames
             .iter_mut()
-            .filter(|x| (*x).fragments.is_empty())
+            .filter(|x| x.fragments.is_empty())
             .collect();
         if collected.is_empty() {
             return;

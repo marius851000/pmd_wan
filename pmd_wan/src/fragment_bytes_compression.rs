@@ -87,7 +87,7 @@ impl CompressionMethod {
                     let mut this_area = vec![];
                     let mut is_all_black = true;
                     for l in 0..64 {
-                        let actual_pixel = pixel_list[(loop_nb * 64 + l) as usize];
+                        let actual_pixel = pixel_list[loop_nb * 64 + l];
                         this_area.push(actual_pixel);
                         if actual_pixel != 0 {
                             is_all_black = false;

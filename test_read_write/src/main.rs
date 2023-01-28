@@ -56,7 +56,7 @@ fn test_read_reencode<F: Read + Seek>(
         }
     };
 
-    if reread_wan == None || reread_wan.as_ref() != Some(&original_wan)
+    if reread_wan.is_none() || reread_wan.as_ref() != Some(&original_wan)
     /*|| (!shouldnt_be_byte_perfect && buffer_in != buffer_out)*/
     {
         // write the in.bin and out.bin file

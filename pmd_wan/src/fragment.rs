@@ -84,7 +84,7 @@ impl Fragment {
         let offset_x = (offset_x_data & 0x01FF) as i16 - 256; //range: 0-511
 
         let alloc_and_palette = file.read_u16::<LE>()?;
-        let pal_idx = ((0xF000 & alloc_and_palette) >> 12) as u16;
+        let pal_idx = (0xF000 & alloc_and_palette) >> 12;
 
         Ok((
             Fragment {
