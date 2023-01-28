@@ -6,8 +6,8 @@ use binwrite::BinWrite;
 #[binwrite(little)]
 #[br(little)]
 pub struct FrameOffset {
-    head: (i16, i16),
-    hand_left: (i16, i16),
-    hand_right: (i16, i16),
-    center: (i16, i16),
+    pub head: (i16, i16),
+    pub hand_left: (i16, i16),
+    pub hand_right: (i16, i16),
+    pub center: (i16, i16),
 }
