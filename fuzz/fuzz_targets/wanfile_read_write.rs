@@ -17,8 +17,10 @@ fuzz_target!(|data: &[u8]| {
             reread_file.seek(SeekFrom::Start(0)).unwrap();
             let mut reread_wan = pmd_wan::WanImage::decode_wan(reread_file).unwrap();
             reread_wan.animation_store.copied_on_previous = None;
-            //TODO: ensure this hold true every time
-            //assert_eq!(valid, reread_wan);
+            //TODO: I don’t have time for those details
+            if valid.animation_store.anim_groups.len() != 0 && valid.animation_store.anim_groups.iter().map(|x| x.len()).min() != Some(0) {
+                assert_eq!(valid, reread_wan);
+            }
         }
     }
 });

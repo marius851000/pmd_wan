@@ -137,8 +137,8 @@ impl WanImage {
             WanError::OverflowSubstraction(
                 frames_end_pointer,
                 pointer_frames_table,
-                "meta frame reference end pointer",
-                "pointer meta frame reference table",
+                "fragment reference end pointer",
+                "pointer fragment reference table",
             ),
         )?;
 
@@ -226,7 +226,7 @@ impl WanImage {
             "start of frames reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let (fragments_references, size_to_allocate_for_max_frame) =
+        let (frames_references, size_to_allocate_for_max_frame) =
             self.frame_store.write(file)?;
 
         trace!(
@@ -264,8 +264,8 @@ impl WanImage {
             "start of the fragment reference offset: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let fragment_reference_offset = file.seek(SeekFrom::Current(0))?;
-        for reference in fragments_references {
+        let frame_reference_offset = file.seek(SeekFrom::Current(0))?;
+        for reference in frames_references {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
             file.write_u32::<LE>(reference)?;
         }
@@ -321,7 +321,7 @@ impl WanImage {
             file.seek(SeekFrom::Current(0))?
         );
         sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
-        file.write_u32::<LE>(fragment_reference_offset as u32)?;
+        file.write_u32::<LE>(frame_reference_offset as u32)?;
 
         if let Some(particule_offset) = particule_offset {
             sir0_offsets.push(file.seek(SeekFrom::Current(0))? as u32);
