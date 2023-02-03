@@ -92,8 +92,8 @@ impl WanImage {
         } else if sprite_type != SpriteType::Chara && frame_offset_table != 0 {
             return Err(WanError::ExistenceFrameOffsetForNonChara);
         };
-        let pointer_animation_groups_table = file.read_u32::<LE>()? as u64;
-        if pointer_animation_groups_table > source_file_lenght {
+        let pointer_animation_table = file.read_u32::<LE>()? as u64;
+        if pointer_animation_table > source_file_lenght {
             return Err(WanError::PostFilePointer("animation groups table"));
         }
         let amount_animation_group = file.read_u16::<LE>()?;
@@ -112,7 +112,7 @@ impl WanImage {
             color_id => return Err(WanError::InvalidColorNumber(color_id)),
         };
         let unk2 = file.read_u16::<LE>()?;
-        let amount_images = file.read_u16::<LE>()?;
+        let amount_fragments = file.read_u16::<LE>()?;
 
         trace!("parsing the palette");
 
@@ -124,16 +124,16 @@ impl WanImage {
         let frames_end_pointer: u64 = match frame_offset_table {
             0 => match WanImage::find_first_non_null_animation_seq_entry(
                 &mut file,
-                pointer_animation_groups_table,
+                pointer_animation_table,
             ) {
                 Some(v) => v,
                 // Fall back to animation group offset
-                None => pointer_animation_groups_table,
+                None => pointer_animation_table,
             },
             value => value,
         };
 
-        let amount_fragments_raw = frames_end_pointer.checked_sub(pointer_frames_table).ok_or(
+        let space_frame_raw = frames_end_pointer.checked_sub(pointer_frames_table).ok_or(
             WanError::OverflowSubstraction(
                 frames_end_pointer,
                 pointer_frames_table,
@@ -142,10 +142,10 @@ impl WanImage {
             ),
         )?;
 
-        let amount_fragments = amount_fragments_raw / 4;
+        let nb_frames = space_frame_raw / 4;
 
         file.seek(SeekFrom::Start(pointer_frames_table))?;
-        let mut frames_store = FrameStore::new_from_bytes(&mut file, amount_fragments)?;
+        let mut frames_store = FrameStore::new_from_bytes(&mut file, nb_frames)?;
 
         // decode image
         trace!("reading the image data pointer table");
@@ -154,12 +154,12 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let fragment_store = FragmentBytesStore::new_from_bytes(&mut file, amount_images as u32)?;
+        let fragment_store = FragmentBytesStore::new_from_bytes(&mut file, amount_fragments as u32)?;
 
         // decode animation
         let (anim_store, particule_table_end) = AnimationStore::new(
             &mut file,
-            pointer_animation_groups_table,
+            pointer_animation_table,
             amount_animation_group,
         )?;
 

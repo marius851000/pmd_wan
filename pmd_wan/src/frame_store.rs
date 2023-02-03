@@ -12,13 +12,13 @@ impl FrameStore {
     // assume that the pointer is already well positionned
     pub fn new_from_bytes<F: Read + Seek>(
         file: &mut F,
-        nb_fragments: u64,
+        nb_frames: u64,
     ) -> Result<FrameStore, WanError> {
-        let mut meta_frame_groups = Vec::new();
+        let mut frames = Vec::new();
         let mut last_pointer = None;
 
-        let mut meta_frame_reference: Vec<u64> = Vec::new();
-        for _ in 0..nb_fragments {
+        let mut fragment_reference: Vec<u64> = Vec::new();
+        for _ in 0..nb_frames {
             let actual_ptr = file.read_u32::<LE>()? as u64;
             //some check
             match last_pointer {
@@ -34,22 +34,22 @@ impl FrameStore {
                     }
                 }
             };
-            meta_frame_reference.push(actual_ptr);
+            fragment_reference.push(actual_ptr);
         }
 
-        for meta_frame_id in 0..nb_fragments {
+        for frame_id in 0..nb_frames {
             trace!(
                 "parsing frame n°{} (at offset {})",
-                meta_frame_id,
-                meta_frame_reference[meta_frame_id as usize]
+                frame_id,
+                fragment_reference[frame_id as usize]
             );
             file.seek(SeekFrom::Start(
-                meta_frame_reference[meta_frame_id as usize],
+                fragment_reference[frame_id as usize],
             ))?;
-            meta_frame_groups.push(Frame::new_from_bytes(file)?);
+            frames.push(Frame::new_from_bytes(file)?);
         }
         Ok(FrameStore {
-            frames: meta_frame_groups,
+            frames,
         })
     }
 
