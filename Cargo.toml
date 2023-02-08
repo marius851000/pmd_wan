@@ -1,5 +1,7 @@
 [workspace]
 members = [
     "pmd_wan",
-    "test_read_write"
+    "test_read_write",
+    "test_on_all_shiren",
+    "export_shiren_fragment"
 ]

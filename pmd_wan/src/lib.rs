@@ -76,6 +76,9 @@ pub fn get_opt_le() -> WriterOption {
     binwrite::writer_option_new!(endian: binwrite::Endian::Little)
 }
 
+#[cfg(feature = "shiren_experimental")]
+pub mod shiren;
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug)]
 pub struct GeneralResolution {
     pub x: u32,

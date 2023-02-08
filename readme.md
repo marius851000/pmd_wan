@@ -11,11 +11,14 @@ reading : production ready. Should never panic, and has been fuzzed
 
 - m_attack.bin can sometimes errors
 
-status of writing sprites : ugly, may work but may panic or produce incorrect result
-- monster.bin and m_ground.bin should be both readable and writable
-- probably all ground sprite should be too
+writing : does not provide a nice API for high level stuff for now, but should work correctly, and produce readable images by the game
 
-creating an all new static sprite : Should work with no issue.
+# Shiren
+I’m currently trying to read images from the Shiren The Wanderer on DS. They are similar in some point, and dissimilar in others.
+
+For now, I focus on being able to read them.
+
+It’s behind a feature flag. It is mostly experimental code for now.
 
 ## Executing benchs
 The benchs use real image not under the license of this repo, that you need to provide yourself.
