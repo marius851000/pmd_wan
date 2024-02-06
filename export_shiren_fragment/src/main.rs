@@ -11,14 +11,20 @@ fn main() {
     let mut shiren_palette_file = File::open(shiren_palette_path).unwrap();
     let shiren_palette = ShirenPalette::new(&mut shiren_palette_file).unwrap();
     
+    let mut frame_id = 0;
     for frame in &shiren_wan.frame_store.frames {
+        let mut fragment_id = 0;
         for fragment in &frame.fragments {
             let fragment_bytes = shiren_wan.fragment_bytes_store.fragment_bytes.get(fragment.fragment_bytes_id as usize).unwrap();
             if fragment_bytes.bytes.len() == 512 {
                 let image = shiren_export_fragment(fragment, fragment_bytes, &shiren_palette).unwrap();
                 print!("{:?}\n{}\n", fragment, fragment_bytes.bytes.len());
-                image.save(format!("test-{}-{}-{}-{}.png", fragment.unk1, fragment.unk2, fragment.unk4, fragment.unk5)).unwrap();
+                image.save(format!("test-{}-{}-{}-{}-{}-{}.png", frame_id, fragment_id, fragment.unk1, fragment.unk2, fragment.unk4, fragment.unk5)).unwrap();
+            } else {
+                println!("Skipped an image with fragment_bytes.bytes.len is != 512");
             }
-        }
+            fragment_id += 1;
+        };
+        frame_id += 1;
     }
 }
