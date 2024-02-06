@@ -38,7 +38,7 @@ pub fn create_wan_from_multiple_images(
     sprite_type: SpriteType,
 ) -> anyhow::Result<WanImage> {
     //high level overview of how this work :
-    //1. Get fragments usage stats
+    //1. Get fragments (8 by 8) usage stats
     //2. For each images, get the most used fragment with at least 75% of non-null surface covered. If none are found, remove the 75% requirement. Otherwise, this a fully transparent frame.
     //3. Tile the other fragments
     //4. Optimise the allocation by putting together fragments to form bigger fragment
@@ -337,7 +337,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         let nb_chunk_x = resolution.x / 8;
         let nb_chunk_y = resolution.y / 8;
 
-        let max_unused_chunk = if nb_chunk_x * nb_chunk_y <= 2 { 0 } else { 1 };
+        let max_unused_chunk = if nb_chunk_x * nb_chunk_y <= 2 { 0 } else { (nb_chunk_x * nb_chunk_y) / 2 };
 
         let mut normal_chunk_line = vec![vec![0; 64]; nb_chunk_x as usize];
         let mut bigger_fragment: Vec<u8> = Vec::with_capacity(resolution.nb_pixels() as usize);
