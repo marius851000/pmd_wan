@@ -1,4 +1,4 @@
-use std::io::{Seek, Read};
+use std::io::{Read, Seek};
 
 use byteorder::{ReadBytesExt, LE};
 
@@ -8,7 +8,7 @@ use super::ShirenFrame;
 
 #[derive(Debug)]
 pub struct ShirenFrameStore {
-    pub frames: Vec<ShirenFrame>
+    pub frames: Vec<ShirenFrame>,
 }
 
 impl ShirenFrameStore {
@@ -23,9 +23,7 @@ impl ShirenFrameStore {
             reader.seek(std::io::SeekFrom::Start(pointer as u64))?;
             let frame = ShirenFrame::new(reader)?;
             frames.push(frame);
-        };
-        Ok(Self {
-            frames
-        })
+        }
+        Ok(Self { frames })
     }
 }

@@ -6,10 +6,9 @@ use crate::WanError;
 
 use super::ShirenFragmentBytes;
 
-
 #[derive(Default)]
 pub struct ShirenFragmentBytesStore {
-    pub fragment_bytes: Vec<ShirenFragmentBytes>
+    pub fragment_bytes: Vec<ShirenFragmentBytes>,
 }
 
 impl ShirenFragmentBytesStore {
@@ -24,9 +23,9 @@ impl ShirenFragmentBytesStore {
             trace!("reading fragment bytes at {}", fragment_pointer);
             reader.seek(SeekFrom::Start(fragment_pointer as u64))?;
             fragments.push(ShirenFragmentBytes::new(reader)?);
-        };
+        }
         Ok(Self {
-            fragment_bytes: fragments
+            fragment_bytes: fragments,
         })
     }
 }

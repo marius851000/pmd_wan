@@ -1,4 +1,4 @@
-use std::io::{Seek, Read, SeekFrom};
+use std::io::{Read, Seek, SeekFrom};
 
 use binread::{BinRead, BinReaderExt};
 
@@ -20,7 +20,7 @@ impl ShirenAssemblyEntry {
 
 #[derive(Debug)]
 pub struct ShirenFragmentBytes {
-    pub bytes: Vec<u8>
+    pub bytes: Vec<u8>,
 }
 
 impl ShirenFragmentBytes {
@@ -42,12 +42,10 @@ impl ShirenFragmentBytes {
         for entry in assembly_table.iter() {
             if entry.pointer_to_bytes != 0 {
                 reader.seek(SeekFrom::Start(entry.pointer_to_bytes as u64))?;
-                reader.read(&mut bytes[position..position+entry.bytes_amount as usize])?;
+                reader.read(&mut bytes[position..position + entry.bytes_amount as usize])?;
             }
             position += entry.bytes_amount as usize;
-        };
-        Ok(Self {
-            bytes
-        })
+        }
+        Ok(Self { bytes })
     }
 }

@@ -6,7 +6,7 @@ use super::ShirenFragment;
 
 #[derive(Debug)]
 pub struct ShirenFrame {
-    pub fragments: Vec<ShirenFragment>
+    pub fragments: Vec<ShirenFragment>,
 }
 
 impl ShirenFrame {
@@ -20,8 +20,6 @@ impl ShirenFrame {
             }
             fragments.push(fragment);
         }
-        Ok(Self {
-            fragments
-        })
+        Ok(Self { fragments })
     }
 }

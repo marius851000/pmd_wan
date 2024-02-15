@@ -1,6 +1,6 @@
 use std::io::Read;
 
-use byteorder::{LE, ReadBytesExt};
+use byteorder::{ReadBytesExt, LE};
 
 use crate::WanError;
 
@@ -45,16 +45,16 @@ impl ShirenFragment {
             unk4,
             unk5,
             size_indice_x,
-            size_indice_y
+            size_indice_y,
         })
     }
 
     pub fn is_end_marker(&self) -> bool {
-        return self.fragment_bytes_id == None &&
-            self.unk1 == 0xFF &&
-            self.unk2 == 0xFF &&
-            self.unk3 == Some(0xFFFF) &&
-            self.unk4 == 0xFFFF &&
-            self.unk5 == 0xFFFF;
+        return self.fragment_bytes_id == None
+            && self.unk1 == 0xFF
+            && self.unk2 == 0xFF
+            && self.unk3 == Some(0xFFFF)
+            && self.unk4 == 0xFFFF
+            && self.unk5 == 0xFFFF;
     }
 }

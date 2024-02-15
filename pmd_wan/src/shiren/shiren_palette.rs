@@ -8,7 +8,7 @@ use crate::WanError;
 
 pub struct ShirenPalette {
     /// Orders of color in pixel are R, G, B, A (0x80 for fully visible, 0 for transparent)
-    pub colors: [[u8; 4]; 192]
+    pub colors: [[u8; 4]; 192],
 }
 
 impl ShirenPalette {
@@ -20,8 +20,6 @@ impl ShirenPalette {
                 colors[color_key] = [0, 0, 0, 0];
             }
         }
-        Ok(Self {
-            colors
-        })
+        Ok(Self { colors })
     }
 }
