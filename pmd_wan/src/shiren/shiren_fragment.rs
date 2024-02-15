@@ -6,7 +6,8 @@ use crate::WanError;
 
 #[derive(Debug)]
 pub struct ShirenFragment {
-    pub fragment_bytes_id: u16,
+    // None for 0xFFFF, Some otherwise
+    pub fragment_bytes_id: Option<u16>,
     pub unk1: u8,
     pub unk2: u8,
     pub unk3: Option<u16>,
@@ -22,7 +23,7 @@ impl ShirenFragment {
         let unk1 = reader.read_u8()?;
         let unk2 = reader.read_u8()?;
         let unk3;
-        if unk1 & 0x80 == 0 {
+        if unk1 & 0x80 == 0 || fragment_bytes_id == 0xFFFF {
             unk3 = Some(reader.read_u16::<LE>()?);
         } else {
             unk3 = None;
@@ -33,7 +34,11 @@ impl ShirenFragment {
         let size_indice_x = ((0xC000 & unk5) >> (8 + 6)) as u8;
         //TODO
         Ok(Self {
-            fragment_bytes_id,
+            fragment_bytes_id: if fragment_bytes_id == 0xFFFF {
+                None
+            } else {
+                Some(fragment_bytes_id)
+            },
             unk1,
             unk2,
             unk3,
@@ -45,6 +50,11 @@ impl ShirenFragment {
     }
 
     pub fn is_end_marker(&self) -> bool {
-        return self.fragment_bytes_id == 0xFFFF; //TODO: a more detailed check.
+        return self.fragment_bytes_id == None &&
+            self.unk1 == 0xFF &&
+            self.unk2 == 0xFF &&
+            self.unk3 == Some(0xFFFF) &&
+            self.unk4 == 0xFFFF &&
+            self.unk5 == 0xFFFF;
     }
 }

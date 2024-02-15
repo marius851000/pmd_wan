@@ -26,13 +26,13 @@ pub fn shiren_export_fragment(_fragment: &ShirenFragment, fragment_bytes: &Shire
             for y in 0..8 {
                 for x_nb in 0..4 {
                     let byte = iterator.next().unwrap();
-                    let pixel_id_1 = (byte & 0xF0 >> 4) + 0*16;
+                    let pixel_id_1 = ((byte & 0xF0) >> 4) + 0*16;
                     let pixel_id_2 = (byte & 0x0F) + 0*16;
                     let x1 = chunk_x * 8 + x_nb * 2;
                     let y1 = chunk_y * 8 + y;
 
-                    image.put_pixel(x1 as u32, y1 as u32, Rgba::from(transform_color(palette.colors[pixel_id_1 as usize])));
-                    image.put_pixel(x1 as u32 + 1, y1 as u32, Rgba::from(transform_color(palette.colors[pixel_id_2 as usize])));
+                    image.put_pixel(x1 as u32 + 1, y1 as u32, Rgba::from(transform_color(palette.colors[pixel_id_1 as usize])));
+                    image.put_pixel(x1 as u32, y1 as u32, Rgba::from(transform_color(palette.colors[pixel_id_2 as usize])));
                 }
             }
         }

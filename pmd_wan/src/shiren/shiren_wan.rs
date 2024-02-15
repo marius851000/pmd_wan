@@ -54,7 +54,7 @@ impl ShirenWan {
         
         reader.seek(SeekFrom::Start(unk7_pointer as u64))?;
         let unk7_first_entry_pointer = reader.read_u32::<LE>()?;
-        let nb_frame_fragment = (unk7_first_entry_pointer - unk6_pointer)/4;
+        let nb_frame_fragment = (unk7_first_entry_pointer - unk6_pointer)/4 - 1;
         reader.seek(SeekFrom::Start(unk6_pointer as u64))?;
         let frame_store = ShirenFrameStore::new(reader, nb_frame_fragment)?;
         

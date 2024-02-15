@@ -30,8 +30,10 @@ fn perform_test(path: &Path, test: &mut TestSizeIndices) {
     let wan = ShirenWan::new(&mut file).unwrap();
     for frame in &wan.frame_store.frames {
         for fragment in &frame.fragments {
-            let fragment_bytes_size = wan.fragment_bytes_store.fragment_bytes[fragment.fragment_bytes_id as usize].bytes.len();
-            test.add(&fragment, fragment_bytes_size);
+            if let Some(fragment_bytes_id) = fragment.fragment_bytes_id {
+                let fragment_bytes_size = wan.fragment_bytes_store.fragment_bytes[fragment_bytes_id as usize].bytes.len();
+                test.add(&fragment, fragment_bytes_size);
+            }
         }
     }
 }
