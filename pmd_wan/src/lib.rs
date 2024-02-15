@@ -50,7 +50,9 @@ mod fragment_bytes_compression;
 pub use fragment_bytes_compression::*;
 
 mod fragment_flip;
-pub use fragment_flip::{FragmentFlip, FragmentFlipError, FLIP_STANDARD, FLIP_HORIZONTAL, FLIP_VERTICAL, FLIP_BOTH};
+pub use fragment_flip::{
+    FragmentFlip, FragmentFlipError, FLIP_BOTH, FLIP_HORIZONTAL, FLIP_STANDARD, FLIP_VERTICAL,
+};
 
 mod fragment_finder;
 pub use fragment_finder::{

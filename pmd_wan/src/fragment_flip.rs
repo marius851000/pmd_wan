@@ -92,7 +92,7 @@ impl FragmentFlip {
     pub fn flipped_fragment(self, other: FragmentFlip) -> FragmentFlip {
         Self {
             flip_h: self.flip_h ^ other.flip_h,
-            flip_v: self.flip_v ^ other.flip_v
+            flip_v: self.flip_v ^ other.flip_v,
         }
     }
 

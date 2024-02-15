@@ -51,13 +51,7 @@ impl FragmentBytesAssemblyEntry {
     }
 
     pub fn write<F: Write>(&self, file: &mut F) -> Result<(), WanError> {
-        (
-            self.pixel_src as u32,
-            self.byte_amount,
-            0u16,
-            self._z_index,
-        )
-            .write(file)?;
+        (self.pixel_src as u32, self.byte_amount, 0u16, self._z_index).write(file)?;
         Ok(())
     }
 }

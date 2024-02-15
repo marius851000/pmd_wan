@@ -43,14 +43,10 @@ impl FrameStore {
                 frame_id,
                 fragment_reference[frame_id as usize]
             );
-            file.seek(SeekFrom::Start(
-                fragment_reference[frame_id as usize],
-            ))?;
+            file.seek(SeekFrom::Start(fragment_reference[frame_id as usize]))?;
             frames.push(Frame::new_from_bytes(file)?);
         }
-        Ok(FrameStore {
-            frames,
-        })
+        Ok(FrameStore { frames })
     }
 
     //Return: (List of offset to the encoded frames, max allocation size for a frame)
@@ -71,6 +67,10 @@ impl FrameStore {
 
     /// Returns: max allocation size for a frame
     pub fn compute_fragment_alloc_counter(&self) -> u16 {
-        self.frames.iter().map(|f| f.compute_fragment_alloc_counter()).max().unwrap_or(0)
+        self.frames
+            .iter()
+            .map(|f| f.compute_fragment_alloc_counter())
+            .max()
+            .unwrap_or(0)
     }
 }

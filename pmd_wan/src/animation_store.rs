@@ -15,7 +15,7 @@ struct AnimationGroupEntry {
 pub struct AnimationStore {
     /// some stuff used to ensure perfect reproduçability. You should probably lease this to None
     pub copied_on_previous: Option<Vec<bool>>, //indicate if a sprite can copy on the previous. Will always copy if possible if None
-    pub anim_groups: Vec<Vec<Animation>>, //usize1 = start, usize2 = lenght
+    pub anim_groups: Vec<Vec<Animation>>,
 }
 
 impl AnimationStore {

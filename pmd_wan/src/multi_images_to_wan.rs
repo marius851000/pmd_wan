@@ -337,7 +337,11 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         let nb_chunk_x = resolution.x / 8;
         let nb_chunk_y = resolution.y / 8;
 
-        let max_unused_chunk = if nb_chunk_x * nb_chunk_y <= 2 { 0 } else { (nb_chunk_x * nb_chunk_y) / 2 };
+        let max_unused_chunk = if nb_chunk_x * nb_chunk_y <= 2 {
+            0
+        } else {
+            (nb_chunk_x * nb_chunk_y) / 2
+        };
 
         let mut normal_chunk_line = vec![vec![0; 64]; nb_chunk_x as usize];
         let mut bigger_fragment: Vec<u8> = Vec::with_capacity(resolution.nb_pixels() as usize);

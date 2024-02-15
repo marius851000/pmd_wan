@@ -154,14 +154,12 @@ impl WanImage {
             "start of the image part (source) : {}",
             pointer_image_data_pointer_table
         );
-        let fragment_store = FragmentBytesStore::new_from_bytes(&mut file, amount_fragments as u32)?;
+        let fragment_store =
+            FragmentBytesStore::new_from_bytes(&mut file, amount_fragments as u32)?;
 
         // decode animation
-        let (anim_store, particule_table_end) = AnimationStore::new(
-            &mut file,
-            pointer_animation_table,
-            amount_animation_group,
-        )?;
+        let (anim_store, particule_table_end) =
+            AnimationStore::new(&mut file, pointer_animation_table, amount_animation_group)?;
 
         // decode the frame offsets table
         if frame_offset_table != 0 {
@@ -226,8 +224,7 @@ impl WanImage {
             "start of frames reference: {}",
             file.seek(SeekFrom::Current(0))?
         );
-        let (frames_references, size_to_allocate_for_max_frame) =
-            self.frame_store.write(file)?;
+        let (frames_references, size_to_allocate_for_max_frame) = self.frame_store.write(file)?;
 
         trace!(
             "start of the animation offset: {}",
