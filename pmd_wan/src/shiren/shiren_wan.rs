@@ -1,12 +1,9 @@
-use std::{
-    convert::TryInto,
-    io::{Read, Seek, SeekFrom},
-};
+use std::io::{Read, Seek, SeekFrom};
 
 use binread::BinReaderExt;
 use byteorder::{ReadBytesExt, LE};
 
-use crate::{shiren::ShirenFrameStore, wan_read_raw_4, AnimationStore, WanError};
+use crate::{shiren::ShirenFrameStore, wan_read_raw_4, WanError};
 
 use super::{ShirenAnimationStore, ShirenFragmentBytesStore};
 
@@ -63,7 +60,7 @@ impl ShirenWan {
 
         reader.seek(SeekFrom::Start(animation_store_ptr as u64))?;
         let unk7_first_entry_pointer = reader.read_u32::<LE>()?;
-        let nb_frame_fragment = (unk7_first_entry_pointer - frame_store_ptr) / 4 - 1;
+        let nb_frame_fragment = (unk7_first_entry_pointer - frame_store_ptr) / 4;
 
         reader.seek(SeekFrom::Start(frame_store_ptr as u64))?;
         let frame_store = ShirenFrameStore::new(reader, nb_frame_fragment)?;

@@ -12,12 +12,7 @@ pub struct ShirenFrame {
 impl ShirenFrame {
     pub fn new<T: Read>(reader: &mut T) -> Result<Self, WanError> {
         let mut fragments = Vec::new();
-        loop {
-            let fragment = ShirenFragment::new(reader)?;
-            trace!("read fragment {:?}", fragment);
-            if fragment.is_end_marker() {
-                break;
-            }
+        while let Some(fragment) = ShirenFragment::new(reader)? {
             fragments.push(fragment);
         }
         Ok(Self { fragments })

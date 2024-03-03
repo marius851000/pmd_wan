@@ -2,6 +2,7 @@ use std::fs::File;
 
 use pmd_wan::shiren::{shiren_export_fragment, ShirenFragment, ShirenPalette, ShirenWan};
 use spritebot_storage::{Animation, Frame, FrameOffset, Sprite};
+use image::imageops::flip_horizontal;
 use vfs::PhysicalFS;
 
 fn main() {
@@ -23,11 +24,7 @@ fn main() {
             let mut frames_to_add = Vec::new();
             for frame in animation.frames.iter() {
                 let mut fragment_to_use = None;
-                let frame_id = frame.maybe_frame as usize;
-                if frame_id == 597 {
-                    //TODO:
-                    continue;
-                }
+                let frame_id = frame.frame_id as usize;
                 for fragment in shiren_wan.frame_store.frames[frame_id].fragments.iter() {
                     if fragment.fragment_bytes_id.is_some() {
                         fragment_to_use = Some(fragment);
@@ -47,13 +44,17 @@ fn main() {
                     .unwrap();
 
                 if fragment_bytes.bytes.len() != 512 {
-                    continue;
+                    println!("{:?}", fragment_to_use);
+                    println!("frame {} does not have the 32 by 32 resolution", frame_id);
                 }
 
+                let mut image = shiren_export_fragment(fragment_to_use, fragment_bytes, &shiren_palette).unwrap();
+                if fragment_to_use.is_h_flip {
+                    image = flip_horizontal(&image);
+                }
                 frames_to_add.push(Frame {
-                    duration: 4, //TODO:
-                    image: shiren_export_fragment(fragment_to_use, fragment_bytes, &shiren_palette)
-                        .unwrap(),
+                    duration: frame.frame_duration.try_into().unwrap(),
+                    image,
                     offsets: FrameOffset {
                         center: (0, 0),
                         hand_left: (0, 0),
