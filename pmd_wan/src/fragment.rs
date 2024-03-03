@@ -1,6 +1,6 @@
 use crate::get_bit_u16;
 use crate::FragmentFlip;
-use crate::FragmentResolution;
+use crate::OamShape;
 use crate::WanError;
 use anyhow::bail;
 use byteorder::WriteBytesExt;
@@ -22,7 +22,7 @@ pub struct Fragment {
     pub flip: FragmentFlip,
     pub is_mosaic: bool,
     pub pal_idx: u16,
-    pub resolution: FragmentResolution,
+    pub resolution: OamShape,
 }
 
 impl Fragment {
@@ -97,7 +97,7 @@ impl Fragment {
                 flip,
                 is_mosaic,
                 pal_idx,
-                resolution: match FragmentResolution::from_indice(size_indice_x, size_indice_y) {
+                resolution: match OamShape::new(size_indice_y, size_indice_x) {
                     Some(r) => r,
                     None => {
                         return Err(WanError::InvalidResolutionIndice(
@@ -133,14 +133,6 @@ impl Fragment {
         file.write_i16::<LE>(fragment_bytes_index)?;
         file.write_u16::<LE>(self.unk1)?;
 
-        let (size_indice_x, size_indice_y) = match self.resolution.get_indice() {
-            Some(r) => r,
-            None => bail!(
-                "The resolution {:?} for a fragment can't be transformed into indices",
-                self.resolution
-            ),
-        };
-
         let (unk3, unk4) = match self.unk3_4 {
             Some((unk3, unk4)) => (unk3, unk4),
             None => {
@@ -149,7 +141,7 @@ impl Fragment {
             }
         };
 
-        let offset_y_data: u16 = ((size_indice_y as u16) << (8 + 6))
+        let offset_y_data: u16 = ((self.resolution.shape_indice() as u16) << (8 + 6))
             + if self.is_mosaic { 1 << (8 + 4) } else { 0 }
             + ((unk4 as u16) << (8 + 1))
             + ((unk3 as u16) << 8)
@@ -171,7 +163,7 @@ impl Fragment {
 
         let (v_flip, h_flip) = self.flip.to_bools();
 
-        let offset_x_data: u16 = ((size_indice_x as u16) << (8 + 6))
+        let offset_x_data: u16 = ((self.resolution.size_indice() as u16) << (8 + 6))
             + ((v_flip as u16) << (8 + 5))
             + ((h_flip as u16) << (8 + 4))
             + ((is_last as u16) << (8 + 3))

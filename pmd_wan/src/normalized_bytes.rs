@@ -1,4 +1,4 @@
-use crate::{FragmentFlip, FragmentResolution};
+use crate::{FragmentFlip, GeneralResolution};
 
 /// Represent a 8×8 bytes that is been normalized, as such that all four [`FragmentFlip`] will result in the same [`NormalizedBytes`]
 #[derive(PartialEq, Eq, Debug, Hash, Clone, Copy, PartialOrd, Ord)]
@@ -8,12 +8,12 @@ impl NormalizedBytes {
     /// The returned [`FragmentFlip`] is the transformation that has been applied
     pub fn new(bytes: [u8; 64]) -> (Self, FragmentFlip) {
         let mut cache = [[0; 64]; 3];
-        let fragment_resolution = FragmentResolution::new(8, 8);
+        let fragment_resolution = GeneralResolution::new(8, 8);
         (FragmentFlip::horizontal())
-            .apply(&bytes, fragment_resolution, &mut cache[0])
+            .apply(&bytes, fragment_resolution.clone(), &mut cache[0])
             .unwrap();
         (FragmentFlip::vertical())
-            .apply(&bytes, fragment_resolution, &mut cache[1])
+            .apply(&bytes, fragment_resolution.clone(), &mut cache[1])
             .unwrap();
         (FragmentFlip::both())
             .apply(&bytes, fragment_resolution, &mut cache[2])
@@ -39,15 +39,15 @@ impl NormalizedBytes {
 pub struct VariableNormalizedBytes(pub Vec<u8>);
 
 impl VariableNormalizedBytes {
-    pub fn new(base: &Vec<u8>, resolution: FragmentResolution) -> (Self, FragmentFlip) {
+    pub fn new(base: &Vec<u8>, resolution: GeneralResolution) -> (Self, FragmentFlip) {
         let mut flip_vertical = vec![0; base.len()];
         let mut flip_horizontal = vec![0; base.len()];
         let mut flip_both = vec![0; base.len()];
         (FragmentFlip::horizontal())
-            .apply(base, resolution, &mut flip_horizontal)
+            .apply(base, resolution.clone(), &mut flip_horizontal)
             .unwrap();
         (FragmentFlip::vertical())
-            .apply(base, resolution, &mut flip_vertical)
+            .apply(base, resolution.clone(), &mut flip_vertical)
             .unwrap();
         (FragmentFlip::both())
             .apply(base, resolution, &mut flip_both)

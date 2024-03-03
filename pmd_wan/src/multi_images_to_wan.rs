@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     encode_fragment_pixels, find_fragments_in_images, fragment_finder::FragmentUse,
-    pad_seven_pixel, Fragment, FragmentBytes, FragmentFinderData, FragmentFlip, FragmentResolution,
+    pad_seven_pixel, Fragment, FragmentBytes, FragmentFinderData, FragmentFlip, OamShape,
     Frame, GeneralResolution, NormalizedBytes, SpriteType, VariableNormalizedBytes, WanImage,
 };
 use anyhow::{bail, Context};
@@ -277,20 +277,20 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             wan,
         };
 
-        for (res_x, res_y) in &[
-            (64, 64),
-            (32, 64),
-            (64, 32),
-            (32, 32),
-            (16, 32),
-            (32, 16),
-            (16, 16),
-            (8, 32),
-            (32, 8),
-            (8, 16),
-            (16, 8),
-        ] {
-            let resolution = FragmentResolution::new(*res_x, *res_y);
+        for (shape_indice, size_indice) in [
+            (0, 3),
+            (2, 3),
+            (1, 3),
+            (0, 2),
+            (2, 2),
+            (1, 2),
+            (0, 1),
+            (2, 1),
+            (1, 1),
+            (1, 0),
+            (2, 0),
+        ].into_iter() {
+            let resolution = OamShape::new(shape_indice, size_indice).unwrap();
             s.process_resolution(resolution);
         }
 
@@ -304,7 +304,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                 .fragment_bytes_store
                 .fragment_bytes
                 .push(FragmentBytes {
-                    mixed_pixels: encode_fragment_pixels(&bytes.0, FragmentResolution::new(8, 8))
+                    mixed_pixels: encode_fragment_pixels(&bytes.0, OamShape::new(0, 0).unwrap().size())
                         .unwrap(),
                     z_index: 0,
                 });
@@ -321,21 +321,21 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                     flip: usage.flip,
                     is_mosaic: false,
                     pal_idx: 0,
-                    resolution: FragmentResolution::new(8, 8),
+                    resolution: OamShape::new(0, 0).unwrap(),
                 });
             }
         }
     }
 
-    fn process_resolution(&mut self, resolution: FragmentResolution) {
+    fn process_resolution(&mut self, resolution: OamShape) {
         //TODO: better optimisation
         let mut remaining_fragments_to_check = BTreeSet::new();
         for key in self.group.keys() {
             remaining_fragments_to_check.insert(*key);
         }
 
-        let nb_chunk_x = resolution.x / 8;
-        let nb_chunk_y = resolution.y / 8;
+        let nb_chunk_x = resolution.size().x / 8;
+        let nb_chunk_y = resolution.size().y / 8;
 
         let max_unused_chunk = if nb_chunk_x * nb_chunk_y <= 2 {
             0
@@ -344,7 +344,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         };
 
         let mut normal_chunk_line = vec![vec![0; 64]; nb_chunk_x as usize];
-        let mut bigger_fragment: Vec<u8> = Vec::with_capacity(resolution.nb_pixels() as usize);
+        let mut bigger_fragment: Vec<u8> = Vec::with_capacity(resolution.size().nb_pixels() as usize);
         'next_fragment: while let Some(possible_fragment) = {
             //NOTE: use pop_last (or pop_first) when stabilized
             if let Some(selected) = { remaining_fragments_to_check.iter().next().copied() } {
@@ -380,7 +380,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                                 {
                                     flip.apply(
                                         &norm_bytes.0,
-                                        FragmentResolution::new(8, 8),
+                                        GeneralResolution::new(8, 8),
                                         &mut normal_chunk_line[small_fragment_row as usize],
                                     )
                                     .unwrap();
@@ -406,7 +406,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                         }
 
                         let (normalized_bigger_fragment, bigger_flip) =
-                            VariableNormalizedBytes::new(&bigger_fragment, resolution);
+                            VariableNormalizedBytes::new(&bigger_fragment, resolution.size());
                         if let Some(base_bigger_fragment) = &base_bigger_fragment {
                             if &normalized_bigger_fragment != base_bigger_fragment {
                                 continue 'skip_fragment_positon;
@@ -440,7 +440,7 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                         .push(FragmentBytes {
                             mixed_pixels: encode_fragment_pixels(
                                 &base_bigger_fragment.unwrap().0,
-                                resolution,
+                                resolution.size(),
                             )
                             .unwrap(),
                             z_index: 0,

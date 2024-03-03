@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::FragmentResolution;
+use crate::GeneralResolution;
 
 pub const FLIP_STANDARD: FragmentFlip = FragmentFlip::standard();
 pub const FLIP_VERTICAL: FragmentFlip = FragmentFlip::vertical();
@@ -46,7 +46,7 @@ impl FragmentFlip {
     pub fn apply(
         self,
         source: &[u8],
-        resolution: FragmentResolution,
+        resolution: GeneralResolution,
         target: &mut [u8],
     ) -> Result<(), FragmentFlipError> {
         if resolution.nb_pixels() as usize != source.len()
@@ -110,20 +110,20 @@ impl FragmentFlip {
 
 #[cfg(test)]
 mod tests {
-    use crate::{FragmentFlip, FragmentFlipError, FragmentResolution};
+    use crate::{FragmentFlip, FragmentFlipError, GeneralResolution};
 
     #[test]
     fn test_tile_flip_apply() {
         let test_data_4x4 = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 4, 3, 2, 1];
-        let resolution = FragmentResolution::new(4, 4);
+        let resolution = GeneralResolution::new(4, 4);
         let mut target_4x4 = [0; 16];
         (FragmentFlip::standard())
-            .apply(&test_data_4x4, resolution, &mut target_4x4)
+            .apply(&test_data_4x4, resolution.clone(), &mut target_4x4)
             .unwrap();
         assert_eq!(target_4x4, test_data_4x4);
 
         (FragmentFlip::horizontal())
-            .apply(&test_data_4x4, resolution, &mut target_4x4)
+            .apply(&test_data_4x4, resolution.clone(), &mut target_4x4)
             .unwrap();
         assert_eq!(
             target_4x4,
@@ -131,7 +131,7 @@ mod tests {
         );
 
         (FragmentFlip::vertical())
-            .apply(&test_data_4x4, resolution, &mut target_4x4)
+            .apply(&test_data_4x4, resolution.clone(), &mut target_4x4)
             .unwrap();
         assert_eq!(
             target_4x4,
@@ -143,7 +143,7 @@ mod tests {
         (FragmentFlip::both())
             .apply(
                 &test_data_3x3,
-                FragmentResolution::new(3, 3),
+                GeneralResolution::new(3, 3),
                 &mut target_3x3,
             )
             .unwrap();
@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(
             (FragmentFlip::vertical()).apply(
                 &test_data_4x4,
-                FragmentResolution::new(3, 3),
+                GeneralResolution::new(3, 3),
                 &mut target_3x3
             ),
             Err(FragmentFlipError::IncoherentResolution)
@@ -161,7 +161,7 @@ mod tests {
         assert_eq!(
             (FragmentFlip::vertical()).apply(
                 &test_data_3x3,
-                FragmentResolution::new(3, 3),
+                GeneralResolution::new(3, 3),
                 &mut target_4x4
             ),
             Err(FragmentFlipError::IncoherentResolution)
@@ -170,7 +170,7 @@ mod tests {
         (FragmentFlip::vertical())
             .apply(
                 &test_data_4x4,
-                FragmentResolution::new(2, 8),
+                GeneralResolution::new(2, 8),
                 &mut target_4x4,
             )
             .unwrap();

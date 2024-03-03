@@ -5,7 +5,7 @@ use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek, SeekFrom, Write};
 use thiserror::Error;
 
-use crate::{CompressionMethod, FragmentResolution, Palette, WanError};
+use crate::{CompressionMethod, GeneralResolution, Palette, WanError};
 
 #[derive(Error, Debug)]
 pub enum FragmentBytesToImageError {
@@ -189,7 +189,7 @@ impl FragmentBytes {
     pub fn get_image(
         &self,
         palette: &Palette,
-        resolution: &FragmentResolution,
+        resolution: GeneralResolution,
         palette_id: u16,
     ) -> Result<ImageBuffer<Rgba<u8>, Vec<u8>>, FragmentBytesToImageError> {
         if resolution.x == 0 || resolution.y == 0 {
@@ -199,7 +199,7 @@ impl FragmentBytes {
         let mut pixels: Vec<u8> =
             Vec::with_capacity(resolution.x as usize * resolution.y as usize * 4);
 
-        for pixel in decode_fragment_pixels(&self.mixed_pixels, resolution)? {
+        for pixel in decode_fragment_pixels(&self.mixed_pixels, resolution.clone())? {
             let mut color = if pixel == 0 {
                 [0, 0, 0, 0]
             } else {
@@ -224,9 +224,9 @@ impl FragmentBytes {
 #[derive(Error, Debug)]
 pub enum DecodeFragmentBytesError {
     #[error("The x resolution ({0}) isn't a multiple of 8")]
-    XResolutionNotMultipleEight(u8),
+    XResolutionNotMultipleEight(u32),
     #[error("The y resolution ({0}) isn't a multiple of 8")]
-    YResolutionNotMultipleEight(u8),
+    YResolutionNotMultipleEight(u32),
     #[error("The target resolution have no pixel (one of x or y resolution is 0)")]
     NoPixel,
 }
@@ -234,7 +234,7 @@ pub enum DecodeFragmentBytesError {
 /// Take the raw encoded fragment (from an [`ImageBytes`]), and decode them into a list of pixels
 pub fn decode_fragment_pixels(
     pixels: &[u8],
-    resolution: &FragmentResolution,
+    resolution: GeneralResolution,
 ) -> Result<Vec<u8>, DecodeFragmentBytesError> {
     if resolution.x % 8 != 0 {
         return Err(DecodeFragmentBytesError::XResolutionNotMultipleEight(
@@ -278,7 +278,7 @@ pub fn decode_fragment_pixels(
 
 pub fn encode_fragment_pixels(
     pixels: &[u8],
-    resolution: FragmentResolution,
+    resolution: GeneralResolution,
 ) -> anyhow::Result<Vec<u8>> {
     if resolution.x % 8 != 0 || resolution.y % 8 != 0 {
         bail!(

@@ -16,8 +16,8 @@ pub use frame::Frame;
 mod fragment;
 pub use fragment::Fragment;
 
-mod fragment_resolution;
-pub use fragment_resolution::FragmentResolution;
+mod oam_shape;
+pub use oam_shape::OamShape;
 
 mod frame_store;
 pub use frame_store::FrameStore;
@@ -95,11 +95,19 @@ impl GeneralResolution {
     pub fn nb_pixels(&self) -> u64 {
         (self.x as u64) * (self.y as u64)
     }
+
+
+    pub fn can_contain(&self, other: Self) -> bool {
+        self.x >= other.x && self.y >= other.y
+    }
 }
 
-fn get_bit_u16(byte: u16, id: u16) -> Option<bool> {
+/// A utility function that get the byte at the position "id" from "bytes".
+/// From the left.
+/// If the id is >= 16, then it return None, otherwise return Some.
+pub fn get_bit_u16(bytes: u16, id: u16) -> Option<bool> {
     if id < 16 {
-        Some((byte >> (15 - id) << 15) >= 1)
+        Some((bytes >> (15 - id) << 15) >= 1)
     } else {
         None
     }
@@ -109,4 +117,16 @@ fn wan_read_raw_4<F: std::io::Read>(file: &mut F) -> Result<[u8; 4], WanError> {
     let mut buffer = [0; 4];
     file.read_exact(&mut buffer)?;
     Ok(buffer)
+}
+
+#[cfg(test)]
+mod tests_lib {
+    use crate::GeneralResolution;
+
+    #[test]
+    pub fn test_can_contain() {
+        assert!(GeneralResolution::new(64, 64).can_contain(GeneralResolution::new(32, 64)));
+        assert!(!GeneralResolution::new(8, 8).can_contain(GeneralResolution::new(30, 4)));
+        assert!(!GeneralResolution::new(0, 0).can_contain(GeneralResolution::new(10, 10)));
+    }
 }

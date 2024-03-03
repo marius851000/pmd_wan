@@ -1,6 +1,6 @@
 use crate::{
     encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
-    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, FragmentResolution, Frame,
+    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, OamShape, Frame,
 };
 use crate::{FragmentBytesStore, FrameStore, Palette, SpriteType, WanError};
 
@@ -413,7 +413,7 @@ impl WanImage {
             }
         };
 
-        image_bytes.get_image(&self.palette, &fragment.resolution, fragment.pal_idx)
+        image_bytes.get_image(&self.palette, fragment.resolution.size(), fragment.pal_idx)
     }
 
     pub fn fix_empty_frames(&mut self) {
@@ -427,12 +427,12 @@ impl WanImage {
             return;
         }
         let image_bytes_index = self.fragment_bytes_store.fragment_bytes.len();
-        let resolution = FragmentResolution { x: 8, y: 8 };
+        let resolution = OamShape::new(0, 0).unwrap();
         self.fragment_bytes_store
             .fragment_bytes
             .push(FragmentBytes {
                 // no panic: We guarantee input parameters are valid
-                mixed_pixels: encode_fragment_pixels(&[0; 256], resolution).unwrap(),
+                mixed_pixels: encode_fragment_pixels(&[0; 256], resolution.size()).unwrap(),
                 z_index: 0,
             });
         for empty_frame in collected {
