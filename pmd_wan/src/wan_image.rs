@@ -1,6 +1,6 @@
 use crate::{
     encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
-    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, OamShape, Frame,
+    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, Frame, OamShape,
 };
 use crate::{FragmentBytesStore, FrameStore, Palette, SpriteType, WanError};
 
@@ -133,13 +133,11 @@ impl WanImage {
             value => value,
         };
 
-        let space_frame_raw = frames_end_pointer.checked_sub(pointer_frames_table).ok_or(
-            WanError::OverflowSubstraction(
-                frames_end_pointer,
-                pointer_frames_table,
-                "fragment reference end pointer",
-                "pointer fragment reference table",
-            ),
+        let space_frame_raw = WanError::checked_sub(
+            frames_end_pointer,
+            pointer_frames_table,
+            "frames end pointer",
+            "pointer frames table",
         )?;
 
         let nb_frames = space_frame_raw / 4;

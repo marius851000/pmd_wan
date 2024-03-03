@@ -14,6 +14,8 @@ pub struct ShirenFragment {
     pub is_h_flip: bool,
     pub unk5: u16,
     pub oam_shape: OamShape,
+    pub offset_x: i16,
+    pub offset_y: i16,
 }
 
 impl ShirenFragment {
@@ -21,10 +23,9 @@ impl ShirenFragment {
     pub fn new<T: Read>(reader: &mut T) -> Result<Option<Self>, WanError> {
         let fragment_bytes_id = reader.read_u16::<LE>()?;
         let unk1 = reader.read_u16::<LE>()?;
-        if fragment_bytes_id == 0xFFFF &&
-            unk1 == 0xFFFF {
-                return Ok(None)
-            }
+        if fragment_bytes_id == 0xFFFF && unk1 == 0xFFFF {
+            return Ok(None);
+        }
         let unk3;
         if unk1 & 0x0080 == 0 || fragment_bytes_id == 0xFFFF {
             unk3 = Some(reader.read_u16::<LE>()?);
@@ -33,18 +34,24 @@ impl ShirenFragment {
         }
         let unk4 = reader.read_u16::<LE>()?;
         let unk5 = reader.read_u16::<LE>()?;
-        
+
         let is_h_flip = get_bit_u16(unk4, 3).unwrap();
         let some_transformed_unk = unk4 & 0xe00 >> 9;
         //TODO: there’s probably a vertical flip too
-        let size_indice = (unk4 >> 14) as u8;
+        let size_indice = if unk3.is_some() {
+            (unk4 >> 14) as u8
+        } else {
+            2
+        };
         let shape_indice = unk3.map(|x| (x >> 14) as u8).unwrap_or(0);
         let oam_shape = if let Some(oam_shape) = OamShape::new(shape_indice, size_indice) {
-                oam_shape
-            } else {
-                return Err(WanError::InvalidResolutionIndice(shape_indice, size_indice));
-            };
-        //TODO: size indice stuff
+            oam_shape
+        } else {
+            return Err(WanError::InvalidResolutionIndice(shape_indice, size_indice));
+        };
+
+        let offset_x = (unk4 & 0x1FF) as i16 - 256;
+        let offset_y = unk3.map(|x| ((x & 0xFF) as i8) as i16).unwrap_or(0);
         Ok(Some(Self {
             fragment_bytes_id: if fragment_bytes_id == 0xFFFF {
                 None
@@ -56,7 +63,9 @@ impl ShirenFragment {
             unk4,
             is_h_flip,
             unk5,
-            oam_shape
+            oam_shape,
+            offset_x,
+            offset_y,
         }))
     }
 }

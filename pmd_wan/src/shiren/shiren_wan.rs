@@ -47,25 +47,36 @@ impl ShirenWan {
             if unk21 == 0 {
                 todo!();
             }
-            let nb_fragments: usize = ((unk21 - fragment_bytes_store_pointer) / 4) as usize;
+            let nb_fragments: usize = (WanError::checked_sub(
+                unk21,
+                fragment_bytes_store_pointer,
+                "unk21",
+                "fragment_bytes_store_pointer",
+            )? / 4) as usize;
             reader.seek(SeekFrom::Start(fragment_bytes_store_pointer.into()))?;
             fragment_bytes_store = ShirenFragmentBytesStore::new(reader, nb_fragments)?;
         } else {
             fragment_bytes_store = ShirenFragmentBytesStore::default();
         }
 
-        if frame_store_ptr == 0 || animation_store_ptr == 0 {
-            todo!();
-        }
-
         reader.seek(SeekFrom::Start(animation_store_ptr as u64))?;
         let unk7_first_entry_pointer = reader.read_u32::<LE>()?;
-        let nb_frame_fragment = (unk7_first_entry_pointer - frame_store_ptr) / 4;
+        let nb_frame_fragment = WanError::checked_sub(
+            unk7_first_entry_pointer,
+            frame_store_ptr,
+            "unk7 first entry pointer",
+            "frame store ptr",
+        )? / 4;
 
         reader.seek(SeekFrom::Start(frame_store_ptr as u64))?;
         let frame_store = ShirenFrameStore::new(reader, nb_frame_fragment)?;
 
-        let nb_animation_group = (fragment_bytes_store_pointer - animation_store_ptr) / 4;
+        let nb_animation_group = WanError::checked_sub(
+            fragment_bytes_store_pointer,
+            animation_store_ptr,
+            "fragment bytes store pointer",
+            "animation store pointer",
+        )? / 4;
         reader.seek(SeekFrom::Start(animation_store_ptr.into()))?;
         let animation_store = ShirenAnimationStore::new(reader, nb_animation_group)?;
 

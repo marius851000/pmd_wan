@@ -21,6 +21,7 @@ binwrite = "0.2.1"
 pmd_sir0 = "1.2.2"
 anyhow = "1.0.48"
 arr_macro = "0.2.1"
+num-traits = "0.2.18"
 
 [features]
 image = []

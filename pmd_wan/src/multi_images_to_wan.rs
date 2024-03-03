@@ -6,8 +6,8 @@ use std::{
 
 use crate::{
     encode_fragment_pixels, find_fragments_in_images, fragment_finder::FragmentUse,
-    pad_seven_pixel, Fragment, FragmentBytes, FragmentFinderData, FragmentFlip, OamShape,
-    Frame, GeneralResolution, NormalizedBytes, SpriteType, VariableNormalizedBytes, WanImage,
+    pad_seven_pixel, Fragment, FragmentBytes, FragmentFinderData, FragmentFlip, Frame,
+    GeneralResolution, NormalizedBytes, OamShape, SpriteType, VariableNormalizedBytes, WanImage,
 };
 use anyhow::{bail, Context};
 
@@ -289,7 +289,9 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
             (1, 1),
             (1, 0),
             (2, 0),
-        ].into_iter() {
+        ]
+        .into_iter()
+        {
             let resolution = OamShape::new(shape_indice, size_indice).unwrap();
             s.process_resolution(resolution);
         }
@@ -304,8 +306,11 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
                 .fragment_bytes_store
                 .fragment_bytes
                 .push(FragmentBytes {
-                    mixed_pixels: encode_fragment_pixels(&bytes.0, OamShape::new(0, 0).unwrap().size())
-                        .unwrap(),
+                    mixed_pixels: encode_fragment_pixels(
+                        &bytes.0,
+                        OamShape::new(0, 0).unwrap().size(),
+                    )
+                    .unwrap(),
                     z_index: 0,
                 });
             // and their usage
@@ -344,7 +349,8 @@ impl<'a> FindBiggerFragmentOnSingleGroupStruct<'a> {
         };
 
         let mut normal_chunk_line = vec![vec![0; 64]; nb_chunk_x as usize];
-        let mut bigger_fragment: Vec<u8> = Vec::with_capacity(resolution.size().nb_pixels() as usize);
+        let mut bigger_fragment: Vec<u8> =
+            Vec::with_capacity(resolution.size().nb_pixels() as usize);
         'next_fragment: while let Some(possible_fragment) = {
             //NOTE: use pop_last (or pop_first) when stabilized
             if let Some(selected) = { remaining_fragments_to_check.iter().next().copied() } {

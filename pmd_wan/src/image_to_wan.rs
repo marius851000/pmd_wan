@@ -236,24 +236,30 @@ fn insert_fragment_pos_in_wan_image(
             }
 
             //no panic: resolution should always be less than 64x64, and be an already valid resolution, to which it can fall back if no smaller images are avalaible
-            let fragment_size = FragmentResolution::find_smaller_containing(FragmentResolution {
-                x: cut_section.width() as u8,
-                y: cut_section.height() as u8,
-            })
+            let fragment_size = OamShape::find_smallest_containing(GeneralResolution::new(
+                cut_section.width().into(),
+                cut_section.height().into(),
+            ))
             .unwrap();
 
-            let buffer_to_write =
-                cut_section.get_fragment(0, 0, fragment_size.x as u16, fragment_size.y as u16, 0);
+            let buffer_to_write = cut_section.get_fragment(
+                0,
+                0,
+                fragment_size.size().x as u16,
+                fragment_size.size().y as u16,
+                0,
+            );
 
             let image_bytes_index = wanimage.fragment_bytes_store.fragment_bytes.len();
             wanimage
                 .fragment_bytes_store
                 .fragment_bytes
                 .push(FragmentBytes {
-                    mixed_pixels: encode_fragment_pixels(buffer_to_write.buffer(), fragment_size)
-                        .context(
-                        "failed to encode the input byte. This is an internal error",
-                    )?,
+                    mixed_pixels: encode_fragment_pixels(
+                        buffer_to_write.buffer(),
+                        fragment_size.size(),
+                    )
+                    .context("failed to encode the input byte. This is an internal error")?,
                     z_index: 1,
                 });
 
@@ -364,7 +370,7 @@ fn insert_frame_flat_test() {
         .unwrap();
     let frame = &wanimage.frame_store.frames[frame_id];
     let fragment = &frame.fragments[0];
-    assert_eq!(fragment.resolution, FragmentResolution { x: 8, y: 8 });
+    assert_eq!(fragment.resolution, OamShape::new(0, 0).unwrap());
     assert_eq!(fragment.pal_idx, 0);
 }
 

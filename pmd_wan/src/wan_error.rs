@@ -1,4 +1,5 @@
-use std::io;
+use num_traits::{CheckedSub, Num};
+use std::{fmt::Display, io};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -42,7 +43,7 @@ pub enum WanError {
     #[error("the 2 byte that indicate the number of color is invalid (found {0}, expected 0 or 1")]
     InvalidColorNumber(u16),
     #[error("the value of a substraction is less than 0: {0}-{1} ({2}-{3})")]
-    OverflowSubstraction(u64, u64, &'static str, &'static str),
+    OverflowSubstraction(String, String, &'static str, &'static str),
     #[error("the value of an addition is more than the maximum possible value: {0}+{1} ({2}+{3})")]
     OverflowAddition(u64, u64, &'static str, &'static str),
     #[error("the resolution of a sprite is too small accept all it's pixel")]
@@ -61,4 +62,21 @@ pub enum WanError {
     NonExistenceFrameOffsetForChara,
     #[error("There is a frame that doesn’t have a frame offset in a Chara sprite")]
     NoOffsetDataForFrame,
+}
+
+impl WanError {
+    pub fn checked_sub<C: Num + CheckedSub + Display>(
+        base: C,
+        to_sub: C,
+        base_name: &'static str,
+        to_sub_name: &'static str,
+    ) -> Result<C, Self> {
+        base.checked_sub(&to_sub)
+            .ok_or(WanError::OverflowSubstraction(
+                base.to_string(),
+                to_sub.to_string(),
+                base_name,
+                to_sub_name,
+            ))
+    }
 }

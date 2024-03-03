@@ -1,5 +1,5 @@
 [package]
-name = "export_shiren_fragment"
+name = "export_shiren_sprite"
 version = "0.1.0"
 edition = "2021"
 

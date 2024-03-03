@@ -96,7 +96,6 @@ impl GeneralResolution {
         (self.x as u64) * (self.y as u64)
     }
 
-
     pub fn can_contain(&self, other: Self) -> bool {
         self.x >= other.x && self.y >= other.y
     }

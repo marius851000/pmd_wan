@@ -17,7 +17,7 @@ static INDICE_TO_SIZE_MAP: [Option<(u8, u8)>; 16] = [
     None,
     None,
     None,
-    None
+    None,
 ];
 
 /// One of the possible shape usable by the DS’s OAM
@@ -26,7 +26,7 @@ static INDICE_TO_SIZE_MAP: [Option<(u8, u8)>; 16] = [
 pub struct OamShape {
     // Make sure both of them are valid when setting them.
     shape_indice: u8,
-    size_indice: u8
+    size_indice: u8,
 }
 
 impl OamShape {
@@ -34,7 +34,7 @@ impl OamShape {
         if shape_indice <= 2 && size_indice <= 3 {
             Some(Self {
                 shape_indice,
-                size_indice
+                size_indice,
             })
         } else {
             None
@@ -64,9 +64,7 @@ impl OamShape {
     /// Return the smallest resolution (in term of allocation) that can contain the target resolution.
     ///
     /// If there are multiple posible resolution with the same number of size to allocate, returnt the one with the lesser amount of pixel. If there are still multiple remaining resolution, return any possible one (implementation detail: they aren't random).
-    pub fn find_smallest_containing(
-        target_resolution: GeneralResolution,
-    ) -> Option<OamShape> {
+    pub fn find_smallest_containing(target_resolution: GeneralResolution) -> Option<OamShape> {
         let mut optimal_result: Option<(u16, u16, OamShape)> = None; // first u16 is number of chunk to allocate for the frame, second u16 is the number of pixel, third is the optimal resolution right now
         for (indice_compressed, entry) in INDICE_TO_SIZE_MAP.iter().copied().enumerate() {
             if let Some(entry) = entry {
@@ -74,11 +72,12 @@ impl OamShape {
                 if resolution_entry.can_contain(target_resolution.clone()) {
                     let entry_oam = OamShape {
                         shape_indice: (indice_compressed as u8) >> 2,
-                        size_indice: (indice_compressed as u8) & 0b11
+                        size_indice: (indice_compressed as u8) & 0b11,
                     };
                     let chunk_to_allocate_entry = entry_oam.chunk_to_allocate_for_fragment();
                     let pixel_nb_entry = (resolution_entry.x as u16) * (resolution_entry.y as u16);
-                    if let Some((chunk_to_allocate_optimal, pixel_nb_optimal, _)) = &optimal_result {
+                    if let Some((chunk_to_allocate_optimal, pixel_nb_optimal, _)) = &optimal_result
+                    {
                         if *chunk_to_allocate_optimal > chunk_to_allocate_entry
                             || (*chunk_to_allocate_optimal == chunk_to_allocate_entry
                                 && *pixel_nb_optimal > pixel_nb_entry)
@@ -87,8 +86,7 @@ impl OamShape {
                                 Some((chunk_to_allocate_entry, pixel_nb_entry, entry_oam));
                         }
                     } else {
-                        optimal_result =
-                            Some((chunk_to_allocate_entry, pixel_nb_entry, entry_oam));
+                        optimal_result = Some((chunk_to_allocate_entry, pixel_nb_entry, entry_oam));
                     };
                 }
             }
@@ -125,9 +123,18 @@ mod tests {
 
     #[test]
     pub fn test_size() {
-        assert_eq!(OamShape::new(0, 3).unwrap().size(), GeneralResolution::new(64, 64));
-        assert_eq!(OamShape::new(1, 2).unwrap().size(), GeneralResolution::new(32, 16));
-        assert_eq!(OamShape::new(2, 3).unwrap().size(), GeneralResolution::new(32, 64));
+        assert_eq!(
+            OamShape::new(0, 3).unwrap().size(),
+            GeneralResolution::new(64, 64)
+        );
+        assert_eq!(
+            OamShape::new(1, 2).unwrap().size(),
+            GeneralResolution::new(32, 16)
+        );
+        assert_eq!(
+            OamShape::new(2, 3).unwrap().size(),
+            GeneralResolution::new(32, 64)
+        );
     }
 
     #[test]
