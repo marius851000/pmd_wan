@@ -49,9 +49,10 @@ impl FragmentResolution {
         None
     }
 
-    pub fn chunk_to_allocate_for_fragment(&self) -> u16 {
-        // extrapolated from the game. Might be invalid.
-        (self.x.saturating_sub(1) / 16 + 1) as u16 * (self.y.saturating_sub(1) / 16 + 1) as u16
+    pub fn chunk_to_allocate_for_fragment(&self) -> u16 {        
+        let size = self.size();
+        let blocks = (size.x * size.y / 256) as u16;
+        if blocks >= 1 {blocks} else {1}
     }
 
     pub fn can_contain(self, other: Self) -> bool {
