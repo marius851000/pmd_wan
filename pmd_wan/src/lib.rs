@@ -62,6 +62,9 @@ pub use fragment_finder::{
 mod image_to_wan;
 pub use image_to_wan::insert_frame_in_wanimage;
 
+mod image_buffer;
+pub use image_buffer::ImageBuffer;
+
 pub mod image_tool;
 
 mod multi_images_to_wan;
