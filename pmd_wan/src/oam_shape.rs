@@ -101,7 +101,7 @@ mod tests {
     use crate::{GeneralResolution, OamShape};
     #[test]
     fn test_resolution_chunk_allocation() {
-        for ((shape, size), expected_output) in [((0, 2), 4), ((1, 1), 2), ((0, 3), 16)].into_iter()
+        for ((shape, size), expected_output) in [((0, 2), 4), ((1, 1), 1), ((0, 3), 16)].into_iter()
         {
             let resolution = OamShape::new(shape, size).unwrap();
             let got = resolution.chunk_to_allocate_for_fragment();
@@ -130,6 +130,10 @@ mod tests {
         assert_eq!(
             OamShape::new(1, 2).unwrap().size(),
             GeneralResolution::new(32, 16)
+        );
+        assert_eq!(
+            OamShape::new(1, 1).unwrap().size(),
+            GeneralResolution::new(32, 8)
         );
         assert_eq!(
             OamShape::new(2, 3).unwrap().size(),
