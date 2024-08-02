@@ -50,8 +50,7 @@ impl FragmentResolution {
     }
 
     pub fn chunk_to_allocate_for_fragment(&self) -> u16 {        
-        let size = self.size();
-        let blocks = (size.x * size.y / 256) as u16;
+        let blocks = ((self.x as u16) * (self.y as u16) / 256) as u16;
         if blocks >= 1 {blocks} else {1}
     }
 
@@ -100,7 +99,7 @@ mod tests {
     use crate::FragmentResolution;
     #[test]
     fn test_resolution_chunk_allocation() {
-        for ((input_x, input_y), expected_output) in &[((32, 32), 4), ((32, 8), 2), ((64, 64), 16)]
+        for ((input_x, input_y), expected_output) in &[((32, 32), 4), ((32, 8), 1), ((64, 64), 16)]
         {
             let resolution = FragmentResolution {
                 x: *input_x,
