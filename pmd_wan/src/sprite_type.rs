@@ -5,7 +5,7 @@ pub enum SpriteType {
     PropsUI,
     Chara,
     Unk2,
-    Unk3,
+    Engine3D,
 }
 
 impl SpriteType {
@@ -14,7 +14,7 @@ impl SpriteType {
             SpriteType::PropsUI => 0,
             SpriteType::Chara => 1,
             SpriteType::Unk2 => 2,
-            SpriteType::Unk3 => 3,
+            SpriteType::Engine3D => 3,
         }
     }
 
@@ -23,7 +23,7 @@ impl SpriteType {
             0 => Some(SpriteType::PropsUI),
             1 => Some(SpriteType::Chara),
             2 => Some(SpriteType::Unk2),
-            3 => Some(SpriteType::Unk3),
+            3 => Some(SpriteType::Engine3D),
             _ => None,
         }
     }
