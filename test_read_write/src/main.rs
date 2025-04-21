@@ -75,6 +75,7 @@ fn test_read_reencode<F: Read + Seek>(
 
 fn main() {
     let opts = Opts::parse();
+
     println!("trying to decode and re-encode byte perfect all sprites in the decompressed PMD explorers rom at {:?}", opts.decompressed_pmd);
 
     println!("trying this on objects");
@@ -82,13 +83,13 @@ fn main() {
     env_logger::init();
 
     for (monster_file_name, decompress) in [
-        ("m_attack.bin", true),
-        ("m_ground.bin", false),
-        ("monster.bin", true),
+        //("EFFECT/effect.bin", false),
+        ("MONSTER/m_attack.bin", true),
+        ("MONSTER/m_ground.bin", false),
+        ("MONSTER/monster.bin", true),
     ] {
         let path = opts
             .decompressed_pmd
-            .join("MONSTER")
             .join(monster_file_name);
         let cpack_file = File::open(&path).unwrap();
         let cpack = CPack::new_from_file(cpack_file).unwrap();
