@@ -1,6 +1,7 @@
 use crate::{
-    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
-    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, Frame, OamShape,
+    encode_fragment_pixels, get_opt_le, sprite_type, wan_read_raw_4, AnimationStore,
+    CompressionMethod, Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, Frame,
+    OamShape,
 };
 use crate::{FragmentBytesStore, FrameStore, Palette, SpriteType, WanError};
 
@@ -67,12 +68,10 @@ impl WanImage {
         file.seek(SeekFrom::Start(sir0_pointer_header))?;
         let pointer_to_anim_info = file.read_u32::<LE>()? as u64;
         let pointer_to_image_data_info = file.read_u32::<LE>()? as u64;
-        let sprite_type = match file.read_u16::<LE>()? {
-            0 => SpriteType::PropsUI,
-            1 => SpriteType::Chara,
-            3 => SpriteType::Unknown,
-            value => return Err(WanError::TypeOfSpriteUnknown(value)),
-        };
+
+        let sprite_type_id = file.read_u16::<LE>()?;
+        let sprite_type = SpriteType::from_id(sprite_type_id)
+            .map_or_else(|| Err(WanError::TypeOfSpriteUnknown(sprite_type_id)), Ok)?;
         //unk #12
 
         // third step: decode animation info block
