@@ -1,7 +1,6 @@
 use crate::{
-    encode_fragment_pixels, get_opt_le, sprite_type, wan_read_raw_4, AnimationStore,
-    CompressionMethod, Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, Frame,
-    OamShape,
+    encode_fragment_pixels, get_opt_le, wan_read_raw_4, AnimationStore, CompressionMethod,
+    Fragment, FragmentBytes, FragmentBytesToImageError, FragmentFlip, Frame, OamShape,
 };
 use crate::{FragmentBytesStore, FrameStore, Palette, SpriteType, WanError};
 

@@ -58,7 +58,11 @@ impl OamShape {
     pub fn chunk_to_allocate_for_fragment(&self) -> u16 {
         let size = self.size();
         let blocks = (size.x * size.y / 256) as u16;
-        if blocks >= 1 {blocks} else {1}
+        if blocks >= 1 {
+            blocks
+        } else {
+            1
+        }
     }
 
     /// Return the smallest resolution (in term of allocation) that can contain the target resolution.

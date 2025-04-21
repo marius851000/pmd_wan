@@ -25,11 +25,11 @@ struct TestSizeIndices {
 
 impl TestSizeIndices {
     fn add(&mut self, fragment: &ShirenFragment, len: usize) {
-        /*self.sizes
+        self.sizes
             .entry(len)
             .or_default()
-            .insert(fragment.size_indice_y);*/
-        /*self.count.entry(len).or_default() += 1;
+            .insert(fragment.oam_shape.size_indice() as u8);
+        *self.count.entry(len).or_default() += 1;
         if true /*len == 128*/ {
             for pos in 0..16 {
                 let bit = get_bit_u16(fragment.unk1, pos as u16).unwrap();
@@ -43,7 +43,7 @@ impl TestSizeIndices {
                 }
             }
             self.recognized_initialized = true;
-        }*/
+        }
     }
 }
 
@@ -58,8 +58,8 @@ fn perform_test(path: &Path, test: &mut TestSizeIndices) {
     let wan = ShirenWan::new(&mut file).unwrap();
     let mut fragment_uid = 0;
     for frame in &wan.frame_store.frames {
-        let mut last_fragment = None;
-        let mut previous_fragment = None;
+        let mut _last_fragment = None;
+        let mut _previous_fragment = None;
         for fragment in &frame.fragments {
             if let Some(fragment_bytes_id) = fragment.fragment_bytes_id {
                 
@@ -89,8 +89,8 @@ fn perform_test(path: &Path, test: &mut TestSizeIndices) {
             /*if let Some(previous_fragment) = previous_fragment {
                 test.add(previous_fragment, 0);
             }*/
-            previous_fragment = Some(fragment);
-            last_fragment = Some(fragment);
+            _previous_fragment = Some(fragment);
+            _last_fragment = Some(fragment);
         }
 
         /*if let Some(last_fragment) = last_fragment {

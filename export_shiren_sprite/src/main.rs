@@ -1,8 +1,6 @@
 use std::fs::File;
 
-use pmd_wan::shiren::{
-    shiren_export_frame, ShirenPalette, ShirenWan,
-};
+use pmd_wan::shiren::{shiren_export_frame, ShirenPalette, ShirenWan};
 use spritebot_storage::{Animation, Frame, FrameOffset, Sprite};
 use vfs::PhysicalFS;
 

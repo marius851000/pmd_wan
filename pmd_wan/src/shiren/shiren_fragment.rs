@@ -36,7 +36,7 @@ impl ShirenFragment {
         let unk5 = reader.read_u16::<LE>()?;
 
         let is_h_flip = get_bit_u16(unk4, 3).unwrap();
-        let some_transformed_unk = unk4 & 0xe00 >> 9;
+        let _some_transformed_unk = unk4 & 0xe00 >> 9;
         //TODO: there’s probably a vertical flip too
         let size_indice = if unk3.is_some() {
             (unk4 >> 14) as u8

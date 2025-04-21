@@ -88,9 +88,7 @@ fn main() {
         ("MONSTER/m_ground.bin", false),
         ("MONSTER/monster.bin", true),
     ] {
-        let path = opts
-            .decompressed_pmd
-            .join(monster_file_name);
+        let path = opts.decompressed_pmd.join(monster_file_name);
         let cpack_file = File::open(&path).unwrap();
         let cpack = CPack::new_from_file(cpack_file).unwrap();
         for sub_file_id in 0..cpack.len() {
