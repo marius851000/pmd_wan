@@ -1,5 +1,5 @@
 mod tests {
-    use image::{io::Reader as ImageReader, ImageFormat};
+    use image::{ImageReader, ImageFormat};
     use std::io::Cursor;
 
     use crate::{

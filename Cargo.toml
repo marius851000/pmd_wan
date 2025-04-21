@@ -4,5 +4,5 @@ members = [
     "pmd_wan",
     "test_read_write",
     "test_on_all_shiren",
-    "export_shiren_sprite",
+    "export_shiren_sprite", "test_convert_to_3d",
 ]

@@ -1,6 +1,6 @@
 [package]
 name = "pmd_wan"
-version = "5.1.2"
+version = "6.0.0"
 authors = ["marius851000 <crates@mariusdavid.fr>"]
 edition = "2021"
 description = "A library that can read wan file, a sprite format used in pokemon mystery dungeon games"
@@ -12,9 +12,9 @@ license = "CC0-1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = { version="0.24.0", default-features = false }
+image = { version="0.25.0", default-features = false }
 log = "0.4.14"
-thiserror = "1.0.28"
+thiserror = "2.0.0"
 byteorder = "1.4.2"
 binread = "2.2.0"
 binwrite = "0.2.1"
@@ -28,8 +28,8 @@ image = []
 shiren_experimental = []
 
 [dev-dependencies]
-criterion = "0.3"
-image = "0.24.2"
+criterion = "0.5"
+image = "0.25.0"
 
 [[bench]]
 name = "parse"
